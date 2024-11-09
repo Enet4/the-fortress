@@ -1,0 +1,54 @@
+[package]
+name = "fortress-of-amaths"
+publish = false
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+
+[dependencies.bevy]
+version = "0.14.2"
+default-features = false
+features = [
+    "android_shared_stdcxx",
+    "animation",
+    "bevy_asset",
+    "bevy_audio",
+    "bevy_color",
+    "bevy_core_pipeline",
+    "bevy_gilrs",
+    "bevy_gizmos",
+    "bevy_gltf",
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_scene",
+    "bevy_sprite",
+    "bevy_state",
+    "bevy_text",
+    "bevy_ui",
+    "bevy_winit",
+    "default_font",
+    "hdr",
+    "multi_threaded",
+    "png",
+    "smaa_luts",
+    "sysinfo_plugin",
+    "tonemapping_luts",
+    "vorbis",
+    "x11",
+]
+
+[features]
+default = []
+webgl2 = ["bevy/webgl2"]
+
+[profile.dev.package.bevy]
+opt-level = 2
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+strip = "debuginfo"
