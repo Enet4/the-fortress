@@ -1,8 +1,9 @@
 //! The mob rules
 
 use bevy::prelude::*;
+use bevy_mod_picking::PickableBundle;
 
-use super::Health;
+use super::{Health, Target};
 
 /// Component representing a spawner of mobs.
 #[derive(Debug, Component)]
@@ -26,8 +27,11 @@ pub fn destroy_spawner_when_done(mut q: Query<(Entity, &MobSpawner)>, mut comman
 #[derive(Debug, Default, Component)]
 pub struct Mob;
 
+#[derive(Default, Bundle)]
 pub struct MobBundle {
     pub mesh: Handle<Mesh>,
     pub mob: Mob,
+    pub target: Target,
     pub health: Health,
+    pub pickable: PickableBundle,
 }

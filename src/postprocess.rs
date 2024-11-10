@@ -293,14 +293,14 @@ pub struct PostProcessSettings {
     pub _webgl2_padding: Vec3,
 }
 
-/// Change the intensity over time to show that the effect is controlled from the main world
-pub fn update_settings(mut settings: Query<&mut PostProcessSettings>, time: Res<Time>) {
+/// Oscillate the intensity of the dithering effect
+pub fn oscillate_dithering(mut settings: Query<&mut PostProcessSettings>, time: Res<Time>) {
     for mut setting in &mut settings {
         let mut intensity = time.elapsed_seconds();
         // Make it loop periodically
         intensity = (intensity - std::f32::consts::PI / 2.).sin();
-        // Remap it to 0..1 because the intensity can't be negative
-        intensity = intensity * 0.5 + 0.5;
+        // Remap it to 0..0.25
+        intensity = intensity * 0.125 + 0.125;
 
         // Set the intensity.
         // This will then be extracted to the render world and uploaded to the gpu automatically by the [`UniformComponentPlugin`]

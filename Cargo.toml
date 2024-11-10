@@ -5,6 +5,13 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.82"
 
+[dependencies]
+
+[dependencies.num-rational]
+version = "0.4.2"
+default-features = false
+features = ["std"]
+
 [dependencies.bevy]
 version = "0.14.2"
 default-features = false
@@ -37,9 +44,17 @@ features = [
     "x11",
 ]
 
+[dependencies.bevy_mod_picking]
+version = "0.20.1"
+default-features = false
+features = ["backend_raycast", "backend_bevy_ui", "debug"]
+
 [features]
 default = []
 webgl2 = ["bevy/webgl2"]
+
+[profile.dev]
+opt-level = 1
 
 [profile.dev.package.bevy]
 opt-level = 2

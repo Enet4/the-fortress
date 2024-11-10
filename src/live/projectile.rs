@@ -1,10 +1,15 @@
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{
+    math::bounding::{BoundingSphere, IntersectsVolume as _},
+    prelude::*,
+};
 
-use super::Player;
+use crate::logic::Num;
+
+use super::{collision::Collidable, weapon::PlayerAttack, Target};
 
 /// Component for things which fly at a fixed speed
-#[derive(Debug, Component)]
-pub struct Velocity(Vec3);
+#[derive(Debug, Default, Component)]
+pub struct Velocity(pub Vec3);
 
 pub fn apply_velocity(time: Res<Time>, mut q: Query<(&mut Transform, &Velocity)>) {
     let delta = time.delta_seconds();
@@ -14,44 +19,44 @@ pub fn apply_velocity(time: Res<Time>, mut q: Query<(&mut Transform, &Velocity)>
 }
 
 /// Marker for a projectile
-#[derive(Debug, Component)]
-pub struct Projectile;
+#[derive(Debug, Default, Component)]
+pub struct Projectile {
+    /// the number which defines the kind of attack
+    pub num: Num,
+}
 
-pub fn spawn_projectiles_via_mouseclick(
+/// Bundle for a projectile
+#[derive(Debug, Default, Bundle)]
+pub struct ProjectileBundle {
+    pub projectile: Projectile,
+    pub velocity: Velocity,
+    #[bundle()]
+    pub transform: TransformBundle,
+}
+
+/// System for handling the collision of projectiles
+pub fn projectile_collision(
     mut cmd: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    buttons: Res<ButtonInput<MouseButton>>,
-    q_windows: Query<&Window, With<PrimaryWindow>>,
-    q_player: Query<&Transform, With<Player>>,
+    projectile_q: Query<(Entity, &Transform, &Projectile)>,
+    collidable_q: Query<(Entity, &Collidable, &Transform, Option<&Target>)>,
+    mut attack_events: EventWriter<PlayerAttack>,
 ) {
-    let Ok(window) = q_windows.get_single() else {
-        return;
-    };
-    if buttons.just_pressed(MouseButton::Left) {
-        let _cursor_position = window.cursor_position();
-
-        // get the player's position
-        let Ok(player_transform) = q_player.get_single() else {
-            return;
-        };
-
-        let pos = player_transform.translation + Vec3::new(0.18, -0.85, 0.5);
-
-        cmd.spawn((
-            Projectile,
-            PbrBundle {
-                transform: Transform::from_translation(pos),
-                mesh: meshes.add(Sphere::new(0.25)).into(),
-                material: materials.add(StandardMaterial {
-                    base_color: Color::srgba_u8(255, 255, 128, 200),
-                    emissive: LinearRgba::new(1., 1., 0.825, 0.75),
-                    emissive_exposure_weight: 0.85,
-                    ..Default::default()
-                }),
-                ..default()
-            },
-            Velocity(Vec3::new(0.0, 0.0, 25.0)),
-        ));
+    for (p_entity, p_transform, projectile) in projectile_q.iter() {
+        for (entity, collidable, t_transform, target) in collidable_q.iter() {
+            let bound = collidable.to_bound(t_transform.translation);
+            if bound.intersects(&BoundingSphere::new(p_transform.translation, 0.5)) {
+                if let Some(target) = target {
+                    println!("hit a target: {:?}", target);
+                    // send event
+                    attack_events.send(PlayerAttack {
+                        entity,
+                        num: projectile.num,
+                    });
+                }
+                println!("hit entity {:?}", entity);
+                // despawn the projectile
+                cmd.entity(p_entity).despawn();
+            }
+        }
     }
 }

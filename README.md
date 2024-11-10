@@ -17,6 +17,12 @@ To build and run in desktop machines:
 cargo run
 ```
 
+To build for WebAssembly:
+
+```sh
+cargo build --target wasm32-unknown-unknown --profile=wasm-release
+```
+
 ## Licensing and Attribution
 
 All source code is licensed under either of
