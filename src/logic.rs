@@ -18,11 +18,6 @@ pub type Num = num_rational::Ratio<i16>;
 /// The rule for damaging the target.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum TargetRule {
-    /// The number must be exactly equal to the target.
-    ///
-    /// Equivalent fractions are considered equal.
-    #[default]
-    Equal,
     /// The attack number must be a factor of the target,
     /// further decomposing the target number until it reaches 1.
     ///
@@ -30,7 +25,12 @@ pub enum TargetRule {
     /// any attack will damage it.
     /// Otherwise, an attack of 1, 0, or a non-whole number
     /// is a failed attack.
+    #[default]
     Factorize,
+    /// The number must be exactly equal to the target.
+    ///
+    /// Equivalent fractions are considered equal.
+    Equal,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -59,7 +59,7 @@ pub fn test_attack(rule: TargetRule, attack: Num, target: Num) -> AttackTest {
             }
         }
         TargetRule::Factorize => {
-            if target == Num::ONE {
+            if target == Num::ONE || target == attack {
                 AttackTest::Effective(None)
             } else if !attack.is_integer() {
                 AttackTest::Failed
