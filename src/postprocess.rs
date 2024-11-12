@@ -288,6 +288,7 @@ impl FromWorld for PostProcessPipeline {
 #[derive(Component, Default, Clone, Copy, ExtractComponent, ShaderType)]
 pub struct PostProcessSettings {
     pub intensity: f32,
+    pub oscillate: f32,
     // WebGL2 structs must be 16 byte aligned.
     #[cfg(feature = "webgl2")]
     pub _webgl2_padding: Vec3,
@@ -296,11 +297,15 @@ pub struct PostProcessSettings {
 /// Oscillate the intensity of the dithering effect
 pub fn oscillate_dithering(mut settings: Query<&mut PostProcessSettings>, time: Res<Time>) {
     for mut setting in &mut settings {
+        if setting.oscillate == 0. {
+            continue;
+        }
+
         let mut intensity = time.elapsed_seconds();
         // Make it loop periodically
         intensity = (intensity - std::f32::consts::PI / 2.).sin();
-        // Remap it to 0..0.25
-        intensity = intensity * 0.125 + 0.125;
+        // Remap it to 0..0.1
+        intensity = intensity * setting.oscillate + setting.oscillate;
 
         // Set the intensity.
         // This will then be extracted to the render world and uploaded to the gpu automatically by the [`UniformComponentPlugin`]

@@ -1,4 +1,5 @@
 use bevy::{
+    core_pipeline::bloom::BloomSettings,
     prelude::*,
     render::{
         camera::Exposure,
@@ -41,7 +42,7 @@ pub fn setup_scene(
     let ceil_texture_handle =
         asset_server.load_with_settings("Wood 16 - 128x128.png", repeat_texture);
 
-    let corridor_dim = Vec3::from_array([10., 10., 64.]);
+    let corridor_dim = Vec3::from_array([12., 8., 64.]);
 
     let floor_material_handle = materials.add(StandardMaterial {
         base_color_texture: Some(floor_texture_handle.clone()),
@@ -140,17 +141,21 @@ pub fn setup_scene(
                     },
                     ..default()
                 },
-                PostProcessSettings::default(),
+                BloomSettings::NATURAL,
+                PostProcessSettings {
+                    oscillate: 0.,
+                    ..default()
+                },
             ))
             .with_children(|cmd| {
                 // light
                 cmd.spawn((
                     PointLightBundle {
                         point_light: PointLight {
-                            color: Color::WHITE,
+                            color: Color::srgba_u8(255, 255, 224, 255),
                             shadows_enabled: true,
-                            intensity: 4_500_000.,
-                            range: 64.,
+                            intensity: 4_400_000.,
+                            range: 62.,
                             shadow_depth_bias: 0.1,
                             ..default()
                         },

@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 
-use crate::logic::Num;
+use crate::{effect::Velocity, logic::Num};
 
-use super::{
-    projectile::{Projectile, Velocity},
-    Player,
-};
+use super::{projectile::Projectile, Player};
 
 /// Component representing weapon currently wielded by the player
 #[derive(Debug, Component)]
@@ -99,11 +96,10 @@ pub fn trigger_weapon(
             PbrBundle {
                 visibility: Visibility::Visible,
                 transform: Transform::from_translation(pos),
-                mesh: meshes.add(Sphere::new(0.125)).into(),
+                mesh: meshes.add(Sphere::new(0.12)).into(),
                 material: materials.add(StandardMaterial {
-                    base_color: Color::srgba_u8(255, 63, 63, 200),
                     emissive: LinearRgba::new(1., 0.825, 0.5, 0.75),
-                    emissive_exposure_weight: 0.85,
+                    emissive_exposure_weight: 0.0,
                     ..Default::default()
                 }),
                 ..default()

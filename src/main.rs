@@ -1,6 +1,7 @@
 use bevy::{
     asset::AssetMetaCheck,
     prelude::*,
+    ui::FocusPolicy,
     window::{WindowMode, WindowResolution},
 };
 use bevy_mod_picking::DefaultPickingPlugins;
@@ -14,10 +15,12 @@ mod logic;
 mod menu;
 mod postprocess;
 mod scene;
+mod ui;
 
 fn setup_ui(mut cmd: Commands) {
     // Node that fills entire background
     cmd.spawn(NodeBundle {
+        focus_policy: FocusPolicy::Pass,
         style: Style {
             width: Val::Percent(100.),
             ..default()

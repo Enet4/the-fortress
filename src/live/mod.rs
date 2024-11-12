@@ -1,5 +1,5 @@
 //! The live action module, containing the active game logic
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::{ecs::system::EntityCommands, prelude::*, ui::FocusPolicy};
 use bevy_mod_picking::{
     events::{Click, Pointer},
     prelude::{Listener, PointerButton},
@@ -15,9 +15,13 @@ use weapon::{AttackCooldown, PlayerAttack, SelectedWeapon};
 pub use weapon::TriggerWeapon;
 
 use crate::{
-    effect::Collapsing,
+    effect::{
+        apply_collapse, apply_torque, apply_velocity, stay_on_floor, time_to_live, Collapsing,
+        TimeToLive, Velocity,
+    },
     logic::{test_attack_on, AttackTest, Num, TargetRule},
     postprocess::PostProcessSettings,
+    ui::MeterBundle,
 };
 
 /// Component for things with a health meter.
@@ -91,10 +95,17 @@ impl Plugin for LiveActionPlugin {
                     weapon::update_cooldown,
                     weapon::trigger_weapon,
                     (
-                        projectile::apply_velocity,
+                        apply_velocity,
+                        apply_torque,
+                        stay_on_floor,
                         projectile::projectile_collision,
+                    )
+                        .chain(),
+                    (
                         process_attacks,
                         process_damage_player,
+                        apply_collapse,
+                        time_to_live,
                     )
                         .chain(),
                 ),
@@ -108,14 +119,87 @@ impl Plugin for LiveActionPlugin {
 fn setup_ui(mut cmd: Commands) {
     // Node that fills entire background
     cmd.spawn(NodeBundle {
+        focus_policy: FocusPolicy::Pass,
         style: Style {
+            display: Display::Flex,
+            bottom: Val::Px(0.),
+            align_self: AlignSelf::FlexEnd,
             width: Val::Percent(100.),
+            height: Val::Auto,
+            flex_direction: FlexDirection::Column,
+            align_content: AlignContent::FlexEnd,
             ..default()
         },
         ..default()
     })
     .with_children(|root| {
         // TODO position weapon selector icons
+
+        // insert button
+        root.spawn(ButtonBundle {
+            background_color: BackgroundColor(Color::BLACK),
+            border_color: BorderColor(Color::WHITE),
+            border_radius: BorderRadius::all(Val::Px(1.)),
+            style: Style {
+                border: UiRect::all(Val::Px(1.)),
+                display: Display::Flex,
+                align_self: AlignSelf::Center,
+                column_gap: Val::Px(10.),
+                width: Val::Px(64.),
+                height: Val::Px(64.),
+                margin: UiRect::all(Val::Px(10.)),
+                ..default()
+            },
+            ..default()
+        })
+        .with_children(|parent| {
+            // shortcut
+            parent.spawn(TextBundle {
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(1.),
+                    top: Val::Px(1.),
+                    ..default()
+                },
+                text: Text::from_section(
+                    "1",
+                    TextStyle {
+                        font_size: 14.,
+                        ..default()
+                    },
+                ),
+                ..Default::default()
+            });
+
+            // the actual number of the attack
+            parent.spawn(TextBundle {
+                style: Style {
+                    align_self: AlignSelf::Center,
+                    margin: UiRect::all(Val::Auto),
+                    ..default()
+                },
+                text: Text::from_section(
+                    "#",
+                    TextStyle {
+                        font_size: 36.,
+                        ..default()
+                    },
+                ),
+                ..Default::default()
+            });
+        });
+
+        // insert cooldown meter
+        root.spawn(MeterBundle::new(
+            Val::Px(8.),
+            Color::srgba_u8(0, 63, 255, 224),
+        ));
+
+        // insert health meter
+        root.spawn(MeterBundle::new(
+            Val::Px(48.),
+            Color::srgba_u8(0, 255, 3, 255),
+        ));
     });
 }
 
@@ -155,6 +239,7 @@ pub fn spawn_player<'a>(cmd: &'a mut Commands, position: Vec3) -> EntityCommands
 pub fn process_attacks(
     mut cmd: Commands,
     mut events: EventReader<PlayerAttack>,
+    mut damage_player_events: EventWriter<DamagePlayer>,
     mut target_query: Query<(&mut Target, Option<&mut Health>)>,
 ) {
     for PlayerAttack { entity, num } in events.read() {
@@ -167,7 +252,7 @@ pub fn process_attacks(
         // evaluate the attack
         let attack_result = test_attack_on(&target, *num);
 
-        println!("attack result: {:?}", attack_result);
+        println!("Attack result: {:?}", attack_result);
         // apply the attack
         match attack_result {
             AttackTest::Effective(None) => {
@@ -175,12 +260,20 @@ pub fn process_attacks(
                     // damage the target
                     health.value -= 1.;
                     if health.value <= 0. {
-                        // destroy the target
-                        cmd.entity(*entity).despawn();
+                        // add the effects to destroy the target
+                        cmd.entity(*entity).remove::<Target>().insert((
+                            Collapsing::default(),
+                            Velocity(Vec3::new(0., 12., 6.)),
+                            TimeToLive(0.75),
+                        ));
                     }
                 } else {
-                    // with no health, the target is destroyed immediately
-                    cmd.entity(*entity).despawn();
+                    // with no health, the target is destroyed
+                    cmd.entity(*entity).remove::<Target>().insert((
+                        Collapsing::default(),
+                        Velocity(Vec3::new(0., 12., 6.)),
+                        TimeToLive(0.75),
+                    ));
                 }
             }
             AttackTest::Effective(Some(new_num)) => {
@@ -188,6 +281,7 @@ pub fn process_attacks(
             }
             AttackTest::Failed => {
                 // nope, damage the player back
+                damage_player_events.send(DamagePlayer { damage: 1. });
             }
         }
     }
@@ -215,6 +309,15 @@ pub fn process_damage_player(
         // update postprocess settings
         for mut settings in postprocess_settings_q.iter_mut() {
             settings.intensity = (settings.intensity + 0.5).min(0.75);
+            if player_health.value < 0.125 {
+                settings.oscillate = 0.45;
+            } else if player_health.value < 0.25 {
+                settings.oscillate = 0.25;
+            } else if player_health.value < 0.5 {
+                settings.oscillate = 0.1;
+            } else {
+                settings.oscillate = 0.01;
+            }
         }
 
         if player_health.value <= 0. {

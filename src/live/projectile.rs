@@ -3,20 +3,9 @@ use bevy::{
     prelude::*,
 };
 
-use crate::logic::Num;
+use crate::{effect::Velocity, logic::Num};
 
 use super::{collision::Collidable, weapon::PlayerAttack, Target};
-
-/// Component for things which fly at a fixed speed
-#[derive(Debug, Default, Component)]
-pub struct Velocity(pub Vec3);
-
-pub fn apply_velocity(time: Res<Time>, mut q: Query<(&mut Transform, &Velocity)>) {
-    let delta = time.delta_seconds();
-    for (mut transform, velocity) in q.iter_mut() {
-        transform.translation += Vec3::new(velocity.0.x, velocity.0.y, velocity.0.z) * delta;
-    }
-}
 
 /// Marker for a projectile
 #[derive(Debug, Default, Component)]
@@ -45,16 +34,15 @@ pub fn projectile_collision(
         for (entity, collidable, t_transform, target) in collidable_q.iter() {
             let bound = collidable.to_bound(t_transform.translation);
             if bound.intersects(&BoundingSphere::new(p_transform.translation, 0.5)) {
-                if let Some(target) = target {
-                    println!("hit a target: {:?}", target);
+                if target.is_some() {
                     // send event
                     attack_events.send(PlayerAttack {
                         entity,
                         num: projectile.num,
                     });
                 }
-                println!("hit entity {:?}", entity);
                 // despawn the projectile
+                // TODO particles
                 cmd.entity(p_entity).despawn();
             }
         }

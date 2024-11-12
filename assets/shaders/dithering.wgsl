@@ -13,6 +13,7 @@
 struct PostProcessSettings {
     /// the intensity of the dithering effect (0 = no dithering, 1 = only dithered output)
     intensity: f32,
+    oscillate: f32,
 #ifdef SIXTEEN_BYTE_ALIGNMENT
     // WebGL2 structs must be 16 byte aligned.
     _webgl2_padding: vec3<f32>
@@ -29,7 +30,7 @@ const BAYER_MATRIX = array<f32, 64>(
     51, 19, 59, 27, 49, 17, 57, 25,
     15, 47, 7,  39, 13, 45, 5,  37,
     63, 31, 55, 23, 61, 29, 53, 21
-) / 64.0f;
+) / 64.f;
 
 @fragment
 fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
@@ -54,16 +55,7 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let i = y * 8 + x;
 
     // define the color filtering array
-    var bayerMatrix = array(
-        0f, 32, 8,  40, 2,  34, 10, 42,
-        48, 16, 56, 24, 50, 18, 58, 26,
-        12, 44, 4,  36, 14, 46, 6,  38,
-        60, 28, 52, 20, 62, 30, 54, 22,
-        3,  35, 11, 43, 1,  33, 9,  41,
-        51, 19, 59, 27, 49, 17, 57, 25,
-        15, 47, 7,  39, 13, 45, 5,  37,
-        63, 31, 55, 23, 61, 29, 53, 21
-    ) / 64.0f;
+    var bayerMatrix = BAYER_MATRIX;
 
     // get the threshold
     let threshold: f32 = bayerMatrix[i];

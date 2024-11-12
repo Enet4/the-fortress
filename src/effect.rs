@@ -1,5 +1,27 @@
-//! Components and systems for various visual effects
+//! Components and systems for miscellaneous effects
 use bevy::prelude::*;
+
+/// Component for things which fly at a fixed speed
+#[derive(Debug, Default, Component)]
+pub struct Velocity(pub Vec3);
+
+pub fn apply_velocity(time: Res<Time>, mut q: Query<(&mut Transform, &Velocity)>) {
+    let delta = time.delta_seconds();
+    for (mut transform, velocity) in q.iter_mut() {
+        transform.translation += Vec3::new(velocity.0.x, velocity.0.y, velocity.0.z) * delta;
+    }
+}
+
+/// Component for things which rotate at a fixed speed
+#[derive(Debug, Default, Component)]
+pub struct Torque(pub Quat);
+
+pub fn apply_torque(time: Res<Time>, mut q: Query<(&mut Transform, &Torque)>) {
+    let delta = time.delta_seconds();
+    for (mut transform, Torque(quat)) in q.iter_mut() {
+        transform.rotate(*quat * delta);
+    }
+}
 
 /// a glimmering effect to a PointLight
 #[derive(Debug, Component)]
@@ -63,14 +85,36 @@ pub struct Collapsing {
     pub speed: f32,
 }
 
-pub fn apply_collapse(time: Res<Time>, mut q: Query<(&mut Transform, &mut Collapsing)>) {
+pub fn apply_collapse(time: Res<Time>, mut q: Query<(&mut Velocity, &mut Collapsing)>) {
     let delta = time.delta_seconds();
-    for (mut transform, mut collapsing) in q.iter_mut() {
-        if transform.translation.y <= 0. {
-            continue;
-        }
+    for (mut velocity, mut collapsing) in q.iter_mut() {
+        collapsing.speed += 168. * delta;
+        velocity.0.y -= collapsing.speed * delta;
+    }
+}
 
-        collapsing.speed += 4. * delta;
-        transform.translation.y = (transform.translation.y - collapsing.speed * delta).max(0.);
+/// Marker for an entity that clips Y to 0 if it goes below it
+#[derive(Debug, Default, Component)]
+pub struct StaysOnFloor;
+
+pub fn stay_on_floor(mut q: Query<&mut Transform, With<StaysOnFloor>>) {
+    for mut transform in q.iter_mut() {
+        if transform.translation.y < 0. {
+            transform.translation.y = 0.;
+        }
+    }
+}
+
+/// Make something disappear after a certain time (in seconds)
+#[derive(Debug, Component)]
+pub struct TimeToLive(pub f32);
+
+pub fn time_to_live(time: Res<Time>, mut cmd: Commands, mut q: Query<(Entity, &mut TimeToLive)>) {
+    let delta = time.delta_seconds();
+    for (entity, mut ttl) in q.iter_mut() {
+        ttl.0 -= delta;
+        if ttl.0 <= 0. {
+            cmd.entity(entity).despawn();
+        }
     }
 }
