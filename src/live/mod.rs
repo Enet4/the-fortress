@@ -13,6 +13,7 @@ mod projectile;
 mod scene;
 mod weapon;
 
+use bevy_ui_anchor::{AnchorTarget, AnchorUiNode, HorizontalAnchor, VerticalAnchor};
 use player::{
     process_attacks, process_damage_player, process_player_movement, update_player_cooldown_meter,
     update_player_health_meter, DamagePlayer, Player, PlayerMovement, TargetDestroyed,
@@ -70,6 +71,71 @@ pub struct Target {
     pub rule: TargetRule,
 }
 
+/// Marker component for the UI node showing the number of the target
+#[derive(Debug, Component)]
+pub struct TargetIconNode;
+
+/// system to despawn target icon nodes when
+/// the target that they are representing is destroyed
+pub fn clear_collapsed_target_icons(
+    mut cmd: Commands,
+    collapsed_targets_q: Query<Entity, With<Collapsing>>,
+    target_icon_q: Query<(Entity, &AnchorUiNode), With<TargetIconNode>>,
+) {
+    for entity in collapsed_targets_q.iter() {
+        for (icon_entity, anchor) in target_icon_q.iter() {
+            let anchor_target = &anchor.target;
+            if matches!(anchor_target, AnchorTarget::Entity(e) if entity == *e) {
+                cmd.entity(icon_entity).despawn_recursive();
+            }
+        }
+    }
+}
+
+/// Spawn a node that shows the target number on top of the target
+pub fn spawn_target_icon(cmd: &mut Commands, entity: Entity, num: Num) -> Entity {
+    // draw a circle
+    cmd.spawn((
+        TargetIconNode,
+        NodeBundle {
+            style: Style {
+                align_self: AlignSelf::Center,
+                margin: UiRect::all(Val::Auto),
+                width: Val::Px(40.),
+                height: Val::Px(40.),
+                ..default()
+            },
+            background_color: BackgroundColor(Color::srgba(0., 0., 0., 0.825)),
+            border_radius: BorderRadius::all(Val::Percent(50.)),
+            ..default()
+        },
+        AnchorUiNode {
+            anchorwidth: HorizontalAnchor::Mid,
+            anchorheight: VerticalAnchor::Mid,
+            target: AnchorTarget::Entity(entity),
+        },
+    ))
+    .with_children(|cmd| {
+        // and draw the number in the circle
+        cmd.spawn(TextBundle {
+            style: Style {
+                align_self: AlignSelf::Center,
+                margin: UiRect::all(Val::Auto),
+                ..default()
+            },
+            text: Text::from_section(
+                num.to_string(),
+                TextStyle {
+                    font_size: 36.,
+                    ..default()
+                },
+            ),
+            ..default()
+        });
+    })
+    .id()
+}
+
 /// Component for the player's attack cooldown meter
 #[derive(Debug, Default, Component)]
 pub struct CooldownMeter;
@@ -78,12 +144,17 @@ pub struct CooldownMeter;
 #[derive(Debug, Default, Component)]
 pub struct HealthMeter;
 
+/// Marker for the main camera
+#[derive(Component)]
+pub struct CameraMarker;
+
 /// The plugin which adds everything related to the live action
 pub struct LiveActionPlugin;
 
 impl Plugin for LiveActionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (setup_ui, install_first_weapon))
+        app.add_plugins(bevy_ui_anchor::AnchorUiPlugin::<CameraMarker>::new())
+            .add_systems(Startup, (setup_ui, install_first_weapon))
             .add_systems(
                 Update,
                 (
@@ -104,6 +175,7 @@ impl Plugin for LiveActionPlugin {
                     (
                         process_attacks,
                         process_target_destroyed,
+                        clear_collapsed_target_icons,
                         process_damage_player,
                         apply_collapse,
                         time_to_live,

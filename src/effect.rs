@@ -105,7 +105,9 @@ pub fn stay_on_floor(mut q: Query<&mut Transform, With<StaysOnFloor>>) {
     }
 }
 
-/// Make something disappear after a certain time (in seconds)
+/// Make something despawn after a certain time (in seconds).
+///
+/// Does not despawn recursively.
 #[derive(Debug, Component)]
 pub struct TimeToLive(pub f32);
 

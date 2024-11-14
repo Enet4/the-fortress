@@ -1185,6 +1185,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_ui_anchor"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3264d02f84383c3451b989c8fe61fb9eab8080942c6bc010d4e5e774f17f9ff3"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
 name = "bevy_utils"
 version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1907,6 +1916,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_mod_picking",
+ "bevy_ui_anchor",
  "num-rational",
 ]
 

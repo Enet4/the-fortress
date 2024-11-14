@@ -15,7 +15,7 @@ use crate::{
 
 use crate::structure;
 
-use super::player::spawn_player;
+use super::{player::spawn_player, spawn_target_icon, CameraMarker};
 
 fn repeat_texture(settings: &mut ImageLoaderSettings) {
     settings.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
@@ -124,15 +124,19 @@ pub fn setup_scene(
 
     // test: add a cube
     let test_cube_dim = Vec3::from_array([2., 4., 2.]);
-    cmd.spawn(SimpleTargetBundle::new_test_cube(
-        Vec3::new(2., 2., 12.),
-        test_cube_dim,
-        meshes.add(Cuboid::from_size(test_cube_dim)).into(),
-        materials.add(StandardMaterial {
-            base_color: Color::srgba_u8(255, 0, 0, 255),
-            ..default()
-        }),
-    ));
+    let test_cube_entity = cmd
+        .spawn(SimpleTargetBundle::new_test_cube(
+            Vec3::new(2., 2., 12.),
+            test_cube_dim,
+            meshes.add(Cuboid::from_size(test_cube_dim)).into(),
+            materials.add(StandardMaterial {
+                base_color: Color::srgba_u8(255, 0, 0, 255),
+                ..default()
+            }),
+        ))
+        .id();
+
+    spawn_target_icon(&mut cmd, test_cube_entity, 1.into());
 
     // add the player, attach a camera to it, then add a light to the camera
     spawn_player(&mut cmd, Vec3::new(0., 2.5, -5.0)).with_children(|cmd| {
@@ -145,6 +149,8 @@ pub fn setup_scene(
         .with_children(|cmd| {
             // camera
             cmd.spawn((
+                CameraMarker,
+                IsDefaultUiCamera,
                 Camera3dBundle {
                     camera: Camera {
                         clear_color: ClearColorConfig::Custom(Color::BLACK),
