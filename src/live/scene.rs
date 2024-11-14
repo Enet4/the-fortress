@@ -6,19 +6,16 @@ use bevy::{
         texture::{ImageAddressMode, ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor},
     },
 };
-use bevy_mod_picking::{
-    events::{Click, Pointer},
-    prelude::{On, Pickable},
-    PickableBundle,
-};
 
 use crate::{
     effect::{Glimmers, Wobbles},
-    live::{callback_on_click, collision::Collidable, spawn_player, Target},
+    live::obstacle::SimpleTargetBundle,
     postprocess::PostProcessSettings,
 };
 
-mod structure;
+use crate::structure;
+
+use super::player::spawn_player;
 
 fn repeat_texture(settings: &mut ImageLoaderSettings) {
     settings.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
@@ -42,7 +39,7 @@ pub fn setup_scene(
     let ceil_texture_handle =
         asset_server.load_with_settings("Wood 16 - 128x128.png", repeat_texture);
 
-    let corridor_dim = Vec3::from_array([12., 8., 64.]);
+    let corridor_dim = Vec3::from_array([12., 8., 72.]);
 
     let floor_material_handle = materials.add(StandardMaterial {
         base_color_texture: Some(floor_texture_handle.clone()),
@@ -72,47 +69,73 @@ pub fn setup_scene(
         ..Default::default()
     });
 
+    // add corridor
     structure::spawn_corridor(
         &mut cmd,
         &mut meshes,
         floor_material_handle,
         ceil_material_handle,
         wall_material_handle,
-        Vec3::default(),
+        Vec3::ZERO,
         corridor_dim,
     );
 
-    // test: add a cube
+    let fork_dim = Vec3::from_array([12., 8., 8.]);
 
-    let test_cube_dim = Vec3::from_array([2., 4., 2.]);
-
-    cmd.spawn((
-        PbrBundle {
-            transform: Transform::from_translation(Vec3::new(2., 2., -16.)),
-            mesh: meshes.add(Cuboid::from_size(test_cube_dim)).into(),
-            material: materials.add(StandardMaterial {
-                base_color: Color::srgba_u8(255, 0, 0, 255),
-                ..Default::default()
-            }),
+    // create new materials for the fork
+    let floor_material_handle = materials.add(StandardMaterial {
+        base_color_texture: Some(floor_texture_handle),
+        uv_transform: bevy::math::Affine2 {
+            matrix2: Mat2::from_cols_array(&[corridor_dim.x / 2., 0., 0., fork_dim.z / 4.]),
             ..Default::default()
         },
-        PickableBundle {
-            pickable: Pickable {
-                is_hoverable: false,
-                should_block_lower: true,
-            },
+        ..Default::default()
+    });
+
+    let ceil_material_handle = materials.add(StandardMaterial {
+        base_color_texture: Some(ceil_texture_handle),
+        uv_transform: bevy::math::Affine2 {
+            matrix2: Mat2::from_cols_array(&[fork_dim.x / 2., 0., 0., fork_dim.z / 4.]),
             ..default()
         },
-        Collidable { dim: test_cube_dim },
-        Target {
-            num: 1.into(),
+        ..default()
+    });
+
+    let wall_material_handle = materials.add(StandardMaterial {
+        base_color: Color::srgb_u8(255, 255, 255),
+        base_color_texture: Some(wall_texture_handle),
+        uv_transform: bevy::math::Affine2 {
+            matrix2: Mat2::from_cols_array(&[fork_dim.x / 2., 0., 0., fork_dim.y / 4.]),
             ..default()
         },
-        On::<Pointer<Click>>::run(callback_on_click),
+        ..default()
+    });
+
+    // add fork at the end of the corridor
+    structure::spawn_fork(
+        &mut cmd,
+        &mut meshes,
+        floor_material_handle,
+        ceil_material_handle,
+        wall_material_handle,
+        Vec3::new(0., 0., corridor_dim.z),
+        fork_dim,
+    );
+
+    // test: add a cube
+    let test_cube_dim = Vec3::from_array([2., 4., 2.]);
+    cmd.spawn(SimpleTargetBundle::new_test_cube(
+        Vec3::new(2., 2., 12.),
+        test_cube_dim,
+        meshes.add(Cuboid::from_size(test_cube_dim)).into(),
+        materials.add(StandardMaterial {
+            base_color: Color::srgba_u8(255, 0, 0, 255),
+            ..default()
+        }),
     ));
 
     // add the player, attach a camera to it, then add a light to the camera
-    spawn_player(&mut cmd, Vec3::new(0., 2.5, -corridor_dim.z / 2. + 4.)).with_children(|cmd| {
+    spawn_player(&mut cmd, Vec3::new(0., 2.5, -5.0)).with_children(|cmd| {
         // wobbly pivot point for the camera and light
         cmd.spawn((
             TransformBundle::default(),
@@ -136,8 +159,8 @@ pub fn setup_scene(
                 FogSettings {
                     color: Color::BLACK,
                     falloff: FogFalloff::Linear {
-                        start: 56.,
-                        end: 64.,
+                        start: 64.,
+                        end: 72.,
                     },
                     ..default()
                 },

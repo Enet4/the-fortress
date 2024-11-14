@@ -18,6 +18,7 @@ pub type Num = num_rational::Ratio<i16>;
 /// The rule for damaging the target.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum TargetRule {
+    /// The default rule for most cases.
     /// The attack number must be a factor of the target,
     /// further decomposing the target number until it reaches 1.
     ///
@@ -31,6 +32,9 @@ pub enum TargetRule {
     ///
     /// Equivalent fractions are considered equal.
     Equal,
+    /// Any attack will fail.
+    /// This is usually a temporary state or a rule for temporary obstacles.
+    Invulnerable,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -69,5 +73,6 @@ pub fn test_attack(rule: TargetRule, attack: Num, target: Num) -> AttackTest {
                 AttackTest::Failed
             }
         }
+        TargetRule::Invulnerable => AttackTest::Failed,
     }
 }

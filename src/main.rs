@@ -7,14 +7,13 @@ use bevy::{
 use bevy_mod_picking::DefaultPickingPlugins;
 use live::LiveActionPlugin;
 use postprocess::PostProcessPlugin;
-use scene::setup_scene;
 
 mod effect;
 mod live;
 mod logic;
 mod menu;
 mod postprocess;
-mod scene;
+mod structure;
 mod ui;
 
 fn setup_ui(mut cmd: Commands) {
@@ -78,7 +77,7 @@ fn main() {
             LiveActionPlugin,
             DefaultPickingPlugins,
         ))
-        .add_systems(Startup, (setup_scene, setup_ui))
+        .add_systems(Startup, (live::setup_scene, setup_ui))
         .add_systems(
             Update,
             (

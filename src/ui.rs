@@ -31,12 +31,14 @@ impl MeterBundle {
     }
 }
 
-pub fn update_meter<T, F>(mut q: Query<(&mut Style, &T), With<Meter>>)
+/// Queries a specific meter and updates it to the given percentage.
+/// This is a function meant to be used within a system.
+#[inline]
+pub fn set_meter_value<T>(mut q: Query<&mut Style, (With<Meter>, With<T>)>, percent: f32)
 where
     T: Component,
-    F: Default + Fn(&T) -> f32,
 {
-    for (mut style, meter) in q.iter_mut() {
-        style.width = Val::Percent(F::default()(meter));
+    for mut style in q.iter_mut() {
+        style.width = Val::Percent(percent);
     }
 }
