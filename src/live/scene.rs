@@ -1,13 +1,7 @@
-use bevy::{
-    core_pipeline::bloom::BloomSettings,
-    prelude::*,
-    render::{
-        camera::Exposure,
-        texture::{ImageAddressMode, ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor},
-    },
-};
+use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Exposure};
 
 use crate::{
+    assets::TextureHandles,
     effect::{Glimmers, Wobbles},
     live::obstacle::SimpleTargetBundle,
     postprocess::PostProcessSettings,
@@ -15,31 +9,24 @@ use crate::{
 
 use crate::structure;
 
-use super::{player::spawn_player, spawn_target_icon, CameraMarker};
-
-fn repeat_texture(settings: &mut ImageLoaderSettings) {
-    settings.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-        address_mode_u: ImageAddressMode::Repeat,
-        address_mode_v: ImageAddressMode::Repeat,
-        ..Default::default()
-    });
-}
+use super::{
+    interlude::InterludeSpec, phase::PhaseTrigger, player::spawn_player, spawn_target_icon,
+    CameraMarker,
+};
 
 /// set up the 3D scene
 pub fn setup_scene(
     mut cmd: Commands,
-    asset_server: Res<AssetServer>,
+    texture_handles: Res<TextureHandles>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let wall_texture_handle =
-        asset_server.load_with_settings("Brick 23 - 128x128.png", repeat_texture);
-    let floor_texture_handle =
-        asset_server.load_with_settings("Tile 9 - 128x128.png", repeat_texture);
-    let ceil_texture_handle =
-        asset_server.load_with_settings("Wood 16 - 128x128.png", repeat_texture);
+    let wall_texture_handle = texture_handles.wall.clone();
+    let floor_texture_handle = texture_handles.floor.clone();
+    let ceil_texture_handle = texture_handles.ceil.clone();
 
-    let corridor_dim = Vec3::from_array([12., 8., 72.]);
+    let corridor_length = 72.;
+    let corridor_dim = Vec3::from_array([12., 8., corridor_length]);
 
     let floor_material_handle = materials.add(StandardMaterial {
         base_color_texture: Some(floor_texture_handle.clone()),
@@ -66,6 +53,7 @@ pub fn setup_scene(
             matrix2: Mat2::from_cols_array(&[0., corridor_dim.y / 4., corridor_dim.z / 4., 0.]),
             ..Default::default()
         },
+        perceptual_roughness: 0.85,
         ..Default::default()
     });
 
@@ -121,22 +109,6 @@ pub fn setup_scene(
         Vec3::new(0., 0., corridor_dim.z),
         fork_dim,
     );
-
-    // test: add a cube
-    let test_cube_dim = Vec3::from_array([2., 4., 2.]);
-    let test_cube_entity = cmd
-        .spawn(SimpleTargetBundle::new_test_cube(
-            Vec3::new(2., 2., 12.),
-            test_cube_dim,
-            meshes.add(Cuboid::from_size(test_cube_dim)).into(),
-            materials.add(StandardMaterial {
-                base_color: Color::srgba_u8(255, 0, 0, 255),
-                ..default()
-            }),
-        ))
-        .id();
-
-    spawn_target_icon(&mut cmd, test_cube_entity, 1.into());
 
     // add the player, attach a camera to it, then add a light to the camera
     spawn_player(&mut cmd, Vec3::new(0., 2.5, -5.0)).with_children(|cmd| {
@@ -199,4 +171,35 @@ pub fn setup_scene(
             });
         });
     });
+
+    // add phase triggers
+
+    // test: add a cube
+    let test_cube_dim = Vec3::from_array([2., 4., 2.]);
+    let test_cube_entity = cmd
+        .spawn(SimpleTargetBundle::new_test_cube(
+            Vec3::new(2., 2., 12.),
+            test_cube_dim,
+            meshes.add(Cuboid::from_size(test_cube_dim)).into(),
+            materials.add(StandardMaterial {
+                base_color: Color::srgba_u8(255, 0, 0, 255),
+                ..default()
+            }),
+        ))
+        .id();
+
+    spawn_target_icon(&mut cmd, test_cube_entity, 1.into());
+
+    // test: add an interlude just before the fork
+
+    cmd.spawn((
+        PhaseTrigger::new_by_corridor(corridor_length, 0.85),
+        InterludeSpec::from_sequence([
+            (
+                "At the end of the corridor, you see two possible paths.\n\nThere appear to be no distinct visual cues between the two.",
+                None,
+            ),
+            ("Reluctantly, you follow your instinct and choose.", None),
+        ]),
+    ));
 }

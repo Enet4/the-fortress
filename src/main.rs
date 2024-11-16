@@ -1,3 +1,4 @@
+use assets::TextureHandles;
 use bevy::{
     asset::AssetMetaCheck,
     prelude::*,
@@ -8,6 +9,7 @@ use bevy_mod_picking::DefaultPickingPlugins;
 use live::LiveActionPlugin;
 use postprocess::PostProcessPlugin;
 
+mod assets;
 mod effect;
 mod live;
 mod logic;
@@ -47,9 +49,18 @@ fn setup_ui(mut cmd: Commands) {
     });
 }
 
+/// All possible states in the game
+#[derive(States, Default, Debug, Clone, Hash, Eq, PartialEq)]
+pub enum AppState {
+    Loading,
+    /// The main part of the game
+    #[default]
+    Live,
+    MainMenu,
+}
+
 fn main() {
     App::new()
-        .insert_resource(AmbientLight::NONE)
         .add_plugins((
             DefaultPlugins
                 .set(WindowPlugin {
@@ -86,6 +97,10 @@ fn main() {
                 postprocess::fadeout_dithering,
             ),
         )
-        .add_systems(PostUpdate, (effect::apply_glimmer, effect::apply_wobble))
+        .add_systems(PostUpdate, (effect::apply_glimmer,))
+        // add resources which we want to be able to load early
+        .init_resource::<TextureHandles>()
+        // add main state
+        .init_state::<AppState>()
         .run();
 }

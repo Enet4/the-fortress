@@ -1,6 +1,8 @@
 //! Components and systems for miscellaneous effects
 use bevy::prelude::*;
 
+use crate::live::LiveTime;
+
 /// Component for things which fly at a fixed speed
 #[derive(Debug, Default, Component)]
 pub struct Velocity(pub Vec3);
@@ -67,7 +69,7 @@ impl Default for Wobbles {
     }
 }
 
-pub fn apply_wobble(time: Res<Time>, mut q: Query<(&mut Transform, &Wobbles)>) {
+pub fn apply_wobble(time: Res<LiveTime>, mut q: Query<(&mut Transform, &Wobbles)>) {
     let time = time.elapsed_seconds();
     for (mut transform, wobble) in q.iter_mut() {
         let offset = Vec3::new(
@@ -118,5 +120,25 @@ pub fn time_to_live(time: Res<Time>, mut cmd: Commands, mut q: Query<(Entity, &m
         if ttl.0 <= 0. {
             cmd.entity(entity).despawn();
         }
+    }
+}
+
+/// Component to make something fade away
+/// (reduces opacity to 0 over time)
+#[derive(Debug, Default, Component)]
+pub struct FadesAway;
+
+pub fn fade_away(
+    time: Res<Time>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut q: Query<&Handle<StandardMaterial>, With<FadesAway>>,
+) {
+    let delta = time.delta_seconds();
+    for material in q.iter_mut() {
+        let Some(material) = materials.get_mut(material.id()) else {
+            return;
+        };
+        let new_alpha = (material.base_color.alpha() - delta * 1.5).max(0.);
+        material.base_color.set_alpha(new_alpha);
     }
 }

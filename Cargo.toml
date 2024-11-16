@@ -48,7 +48,7 @@ features = [
 [dependencies.bevy_mod_picking]
 version = "0.20.1"
 default-features = false
-features = ["backend_raycast", "backend_bevy_ui", "debug"]
+features = ["backend_raycast", "debug"]
 
 [features]
 default = []

@@ -1,19 +1,22 @@
 //! The live action module, containing the active game logic
-use bevy::{prelude::*, ui::FocusPolicy};
+use bevy::{prelude::*, time::Stopwatch, ui::FocusPolicy};
 use bevy_mod_picking::{
     events::{Click, Pointer},
-    prelude::{Listener, PointerButton},
+    prelude::{Listener, On, PointerButton},
 };
 
 pub mod collision;
+mod interlude;
 mod mob;
 pub mod obstacle;
+mod phase;
 mod player;
 mod projectile;
 mod scene;
 mod weapon;
 
 use bevy_ui_anchor::{AnchorTarget, AnchorUiNode, HorizontalAnchor, VerticalAnchor};
+use interlude::AdvanceInterlude;
 use player::{
     process_attacks, process_damage_player, process_player_movement, update_player_cooldown_meter,
     update_player_health_meter, DamagePlayer, Player, PlayerMovement, TargetDestroyed,
@@ -26,12 +29,142 @@ pub use weapon::TriggerWeapon;
 
 use crate::{
     effect::{
-        apply_collapse, apply_torque, apply_velocity, stay_on_floor, time_to_live, Collapsing,
+        self, apply_collapse, apply_torque, apply_velocity, stay_on_floor, time_to_live, Collapsing,
     },
     logic::{Num, TargetRule},
     structure::Fork,
     ui::MeterBundle,
 };
+
+/// Marker for the main camera
+#[derive(Component)]
+pub struct CameraMarker;
+
+/// Running or paused
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+enum LiveState {
+    #[default]
+    Running,
+    Paused,
+    ShowingInterlude,
+}
+
+/// The plugin which adds everything related to the live action
+pub struct LiveActionPlugin;
+
+impl Plugin for LiveActionPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(bevy_ui_anchor::AnchorUiPlugin::<CameraMarker>::new())
+            // game states
+            .init_state::<LiveState>()
+            // startup systems
+            .add_systems(Startup, (setup_ui, install_first_weapon))
+            // systems which should function regardless of the game state
+            .add_systems(Update, pause_on_esc)
+            // systems that only run when the game is running
+            .add_systems(
+                Update,
+                (
+                    update_player_cooldown_meter,
+                    update_player_health_meter,
+                    effect::apply_wobble,
+                    effect::fade_away,
+                    mob::destroy_spawner_when_done,
+                    weapon::update_cooldown,
+                    weapon::trigger_weapon,
+                    weapon::process_new_weapon,
+                    (
+                        process_player_movement,
+                        apply_velocity,
+                        apply_torque,
+                        stay_on_floor,
+                        projectile::projectile_collision,
+                    )
+                        .chain(),
+                    (
+                        process_attacks,
+                        process_target_destroyed,
+                        clear_collapsed_target_icons,
+                        process_damage_player,
+                        apply_collapse,
+                        time_to_live,
+                        process_end_of_corridor,
+                        process_live_time,
+                        mob::process_spawner_trigger,
+                        interlude::process_interlude_trigger,
+                    )
+                        .chain(),
+                )
+                    .run_if(in_state(LiveState::Running)),
+            )
+            .add_systems(
+                Update,
+                (
+                    interlude::fade_in_interlude,
+                    interlude::fade_out_interlude,
+                    interlude::on_click_advance_interlude,
+                    interlude::process_advance_interlude,
+                )
+                    .run_if(in_state(LiveState::ShowingInterlude)),
+            )
+            // resources
+            .init_resource::<LiveTime>()
+            .init_resource::<ProjectileAssets>()
+            .insert_resource(AmbientLight::NONE)
+            // events
+            .add_event::<TriggerWeapon>()
+            .add_event::<PlayerAttack>()
+            .add_event::<TargetDestroyed>()
+            .add_event::<DamagePlayer>()
+            .add_event::<AdvanceInterlude>();
+    }
+}
+
+/// Resource that keeps track of the live (in-game) time.
+///
+/// With this one, time does not count while it is paused.
+#[derive(Debug, Default, Resource)]
+pub struct LiveTime(pub Stopwatch);
+
+impl LiveTime {
+    pub fn elapsed_seconds(&self) -> f32 {
+        self.0.elapsed_secs() as f32
+    }
+}
+
+fn process_live_time(time: Res<Time>, mut live_time: ResMut<LiveTime>) {
+    live_time.0.tick(time.delta());
+}
+
+/// pause the game when the player presses the escape key
+fn pause_on_esc(
+    input: Res<ButtonInput<KeyCode>>,
+    paused_state: Res<State<LiveState>>,
+    mut next_paused_state: ResMut<NextState<LiveState>>,
+    mut paused_node_q: Query<&mut Style, With<PausedDiv>>,
+) {
+    if input.just_pressed(KeyCode::Escape) {
+        match paused_state.get() {
+            LiveState::Running => {
+                next_paused_state.set(LiveState::Paused);
+                for mut style in paused_node_q.iter_mut() {
+                    style.display = Display::Flex;
+                }
+                println!("Game paused");
+            }
+            LiveState::Paused => {
+                next_paused_state.set(LiveState::Running);
+                for mut style in paused_node_q.iter_mut() {
+                    style.display = Display::None;
+                }
+                println!("Game resumed");
+            }
+            LiveState::ShowingInterlude => {
+                // ignore
+            }
+        }
+    }
+}
 
 /// Component for things with a health meter.
 ///
@@ -101,12 +234,13 @@ pub fn spawn_target_icon(cmd: &mut Commands, entity: Entity, num: Num) -> Entity
             style: Style {
                 align_self: AlignSelf::Center,
                 margin: UiRect::all(Val::Auto),
-                width: Val::Px(40.),
-                height: Val::Px(40.),
+                width: Val::Px(42.),
+                height: Val::Px(42.),
                 ..default()
             },
-            background_color: BackgroundColor(Color::srgba(0., 0., 0., 0.825)),
+            background_color: BackgroundColor(Color::BLACK),
             border_radius: BorderRadius::all(Val::Percent(50.)),
+            focus_policy: FocusPolicy::Pass,
             ..default()
         },
         AnchorUiNode {
@@ -114,6 +248,7 @@ pub fn spawn_target_icon(cmd: &mut Commands, entity: Entity, num: Num) -> Entity
             anchorheight: VerticalAnchor::Mid,
             target: AnchorTarget::Entity(entity),
         },
+        On::<Pointer<Click>>::run(callback_on_click),
     ))
     .with_children(|cmd| {
         // and draw the number in the circle
@@ -144,56 +279,6 @@ pub struct CooldownMeter;
 #[derive(Debug, Default, Component)]
 pub struct HealthMeter;
 
-/// Marker for the main camera
-#[derive(Component)]
-pub struct CameraMarker;
-
-/// The plugin which adds everything related to the live action
-pub struct LiveActionPlugin;
-
-impl Plugin for LiveActionPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(bevy_ui_anchor::AnchorUiPlugin::<CameraMarker>::new())
-            .add_systems(Startup, (setup_ui, install_first_weapon))
-            .add_systems(
-                Update,
-                (
-                    update_player_cooldown_meter,
-                    update_player_health_meter,
-                    mob::destroy_spawner_when_done,
-                    weapon::update_cooldown,
-                    weapon::trigger_weapon,
-                    weapon::process_new_weapon,
-                    (
-                        process_player_movement,
-                        apply_velocity,
-                        apply_torque,
-                        stay_on_floor,
-                        projectile::projectile_collision,
-                    )
-                        .chain(),
-                    (
-                        process_attacks,
-                        process_target_destroyed,
-                        clear_collapsed_target_icons,
-                        process_damage_player,
-                        apply_collapse,
-                        time_to_live,
-                        process_end_of_corridor,
-                    )
-                        .chain(),
-                ),
-            )
-            // resources
-            .init_resource::<ProjectileAssets>()
-            // events
-            .add_event::<TriggerWeapon>()
-            .add_event::<PlayerAttack>()
-            .add_event::<TargetDestroyed>()
-            .add_event::<DamagePlayer>();
-    }
-}
-
 fn install_first_weapon(cmd: Commands) {
     install_weapon(cmd, 3.into());
 }
@@ -206,8 +291,13 @@ pub struct WeaponListNode;
 #[derive(Debug, Default, Component)]
 pub struct WeaponButton;
 
+/// Marker component for the UI node that shows the game is paused
+#[derive(Debug, Default, Component)]
+pub struct PausedDiv;
+
+/// Set up the main UI components in the game for the first time
 fn setup_ui(mut cmd: Commands) {
-    // Node that fills entire background
+    // Node for the bottom HUD
     cmd.spawn(NodeBundle {
         focus_policy: FocusPolicy::Pass,
         style: Style {
@@ -251,6 +341,21 @@ fn setup_ui(mut cmd: Commands) {
             HealthMeter,
         ));
     });
+
+    // node for the pausing screen, which is hidden by default
+    cmd.spawn((
+        PausedDiv,
+        NodeBundle {
+            style: Style {
+                display: Display::None,
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
+                ..default()
+            },
+            background_color: BackgroundColor(Color::srgba(0., 0., 0., 0.5)),
+            ..default()
+        },
+    ));
 }
 
 /// create a new button
