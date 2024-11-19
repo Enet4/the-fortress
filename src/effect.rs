@@ -16,11 +16,11 @@ pub fn apply_velocity(time: Res<Time>, mut q: Query<(&mut Transform, &Velocity)>
 
 /// Component for things which rotate at a fixed speed
 #[derive(Debug, Default, Component)]
-pub struct Torque(pub Quat);
+pub struct Rotating(pub Quat);
 
-pub fn apply_torque(time: Res<Time>, mut q: Query<(&mut Transform, &Torque)>) {
+pub fn apply_rotation(time: Res<Time>, mut q: Query<(&mut Transform, &Rotating)>) {
     let delta = time.delta_seconds();
-    for (mut transform, Torque(quat)) in q.iter_mut() {
+    for (mut transform, Rotating(quat)) in q.iter_mut() {
         transform.rotate(*quat * delta);
     }
 }

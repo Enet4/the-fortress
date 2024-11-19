@@ -22,26 +22,26 @@ use player::{
     update_player_health_meter, DamagePlayer, Player, PlayerMovement, TargetDestroyed,
 };
 use projectile::ProjectileAssets;
-use weapon::{install_weapon, PlayerAttack};
+use weapon::{install_weapon, PlayerAttack, WeaponCubeAssets};
 // re-export some stuff
-pub use scene::setup_scene;
 pub use weapon::TriggerWeapon;
 
 use crate::{
     effect::{
-        self, apply_collapse, apply_torque, apply_velocity, stay_on_floor, time_to_live, Collapsing,
+        self, apply_collapse, apply_rotation, apply_velocity, stay_on_floor, time_to_live,
+        Collapsing,
     },
     logic::{Num, TargetRule},
     structure::Fork,
-    ui::MeterBundle,
+    ui::{spawn_button, MeterBundle},
+    AppState,
 };
 
-/// Marker for the main camera
-#[derive(Component)]
-pub struct CameraMarker;
+use super::CameraMarker;
 
 /// Running or paused
-#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(SubStates, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[source(AppState = AppState::Live)]
 enum LiveState {
     #[default]
     Running,
@@ -57,10 +57,13 @@ impl Plugin for LiveActionPlugin {
         app.add_plugins(bevy_ui_anchor::AnchorUiPlugin::<CameraMarker>::new())
             // game states
             .init_state::<LiveState>()
-            // startup systems
-            .add_systems(Startup, (setup_ui, install_first_weapon))
+            // live game setup
+            .add_systems(
+                OnEnter(AppState::Live),
+                (scene::setup_scene, setup_ui, install_first_weapon),
+            )
             // systems which should function regardless of the game state
-            .add_systems(Update, pause_on_esc)
+            .add_systems(Update, pause_on_esc.run_if(in_state(AppState::Live)))
             // systems that only run when the game is running
             .add_systems(
                 Update,
@@ -69,14 +72,16 @@ impl Plugin for LiveActionPlugin {
                     update_player_health_meter,
                     effect::apply_wobble,
                     effect::fade_away,
+                    effect::apply_rotation,
                     mob::destroy_spawner_when_done,
                     weapon::update_cooldown,
                     weapon::trigger_weapon,
                     weapon::process_new_weapon,
+                    weapon::process_approach_weapon_cube,
                     (
                         process_player_movement,
                         apply_velocity,
-                        apply_torque,
+                        apply_rotation,
                         stay_on_floor,
                         projectile::projectile_collision,
                     )
@@ -110,6 +115,7 @@ impl Plugin for LiveActionPlugin {
             // resources
             .init_resource::<LiveTime>()
             .init_resource::<ProjectileAssets>()
+            .init_resource::<WeaponCubeAssets>()
             .insert_resource(AmbientLight::NONE)
             // events
             .add_event::<TriggerWeapon>()
@@ -204,16 +210,16 @@ pub struct Target {
     pub rule: TargetRule,
 }
 
-/// Marker component for the UI node showing the number of the target
+/// Marker component for the UI node showing a number
 #[derive(Debug, Component)]
-pub struct TargetIconNode;
+pub struct IconNode;
 
 /// system to despawn target icon nodes when
 /// the target that they are representing is destroyed
 pub fn clear_collapsed_target_icons(
     mut cmd: Commands,
     collapsed_targets_q: Query<Entity, With<Collapsing>>,
-    target_icon_q: Query<(Entity, &AnchorUiNode), With<TargetIconNode>>,
+    target_icon_q: Query<(Entity, &AnchorUiNode), With<IconNode>>,
 ) {
     for entity in collapsed_targets_q.iter() {
         for (icon_entity, anchor) in target_icon_q.iter() {
@@ -226,10 +232,10 @@ pub fn clear_collapsed_target_icons(
 }
 
 /// Spawn a node that shows the target number on top of the target
-pub fn spawn_target_icon(cmd: &mut Commands, entity: Entity, num: Num) -> Entity {
+pub fn spawn_icon(cmd: &mut Commands, entity: Entity, num: Num, color: Color) -> Entity {
     // draw a circle
     cmd.spawn((
-        TargetIconNode,
+        IconNode,
         NodeBundle {
             style: Style {
                 align_self: AlignSelf::Center,
@@ -261,6 +267,7 @@ pub fn spawn_target_icon(cmd: &mut Commands, entity: Entity, num: Num) -> Entity
             text: Text::from_section(
                 num.to_string(),
                 TextStyle {
+                    color,
                     font_size: 36.,
                     ..default()
                 },
@@ -271,6 +278,11 @@ pub fn spawn_target_icon(cmd: &mut Commands, entity: Entity, num: Num) -> Entity
     .id()
 }
 
+/// Spawn a node that shows the target number on top of the target
+pub fn spawn_target_icon(cmd: &mut Commands, entity: Entity, num: Num) -> Entity {
+    spawn_icon(cmd, entity, num, Color::WHITE)
+}
+
 /// Component for the player's attack cooldown meter
 #[derive(Debug, Default, Component)]
 pub struct CooldownMeter;
@@ -279,8 +291,8 @@ pub struct CooldownMeter;
 #[derive(Debug, Default, Component)]
 pub struct HealthMeter;
 
-fn install_first_weapon(cmd: Commands) {
-    install_weapon(cmd, 3.into());
+fn install_first_weapon(mut cmd: Commands) {
+    install_weapon(&mut cmd, 3.into());
 }
 
 /// Marker component for a UI node containing the weapon selectors
@@ -293,7 +305,13 @@ pub struct WeaponButton;
 
 /// Marker component for the UI node that shows the game is paused
 #[derive(Debug, Default, Component)]
-pub struct PausedDiv;
+struct PausedDiv;
+
+#[derive(Debug, Component)]
+enum PausedButtonAction {
+    Resume,
+    GiveUp,
+}
 
 /// Set up the main UI components in the game for the first time
 fn setup_ui(mut cmd: Commands) {
@@ -348,6 +366,9 @@ fn setup_ui(mut cmd: Commands) {
         NodeBundle {
             style: Style {
                 display: Display::None,
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
                 width: Val::Percent(100.),
                 height: Val::Percent(100.),
                 ..default()
@@ -355,7 +376,14 @@ fn setup_ui(mut cmd: Commands) {
             background_color: BackgroundColor(Color::srgba(0., 0., 0., 0.5)),
             ..default()
         },
-    ));
+    ))
+    .with_children(|cmd| {
+        // button to resume the game
+        spawn_button(cmd, "Resume", PausedButtonAction::Resume);
+
+        // button to return to main menu
+        spawn_button(cmd, "Give Up", PausedButtonAction::GiveUp);
+    });
 }
 
 /// create a new button
@@ -481,5 +509,46 @@ pub fn process_end_of_corridor(
         health.replenish();
 
         // and spawn new input arrows to select which way to go
+        spawn_decision_arrows(&mut cmd);
     }
+}
+
+/// Marker component for the UI node containing the decision arrows
+#[derive(Debug, Component)]
+struct DecisionArrowsDiv;
+
+#[derive(Debug, Component)]
+enum Decision {
+    Left,
+    Right,
+}
+
+fn spawn_decision_arrows(cmd: &mut Commands) {
+    cmd.spawn((
+        DecisionArrowsDiv,
+        NodeBundle {
+            style: Style {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Row,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Stretch,
+                width: Val::Percent(100.),
+                column_gap: Val::Auto,
+                height: Val::Auto,
+                margin: UiRect {
+                    top: Val::Auto,
+                    bottom: Val::Auto,
+                    left: Val::Auto,
+                    right: Val::Auto,
+                    ..default()
+                },
+                ..default()
+            },
+            ..default()
+        },
+    ))
+    .with_children(|cmd| {
+        spawn_button(cmd, "<", Decision::Left);
+        spawn_button(cmd, ">", Decision::Right);
+    });
 }

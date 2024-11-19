@@ -2,11 +2,11 @@ use assets::TextureHandles;
 use bevy::{
     asset::AssetMetaCheck,
     prelude::*,
-    ui::FocusPolicy,
     window::{WindowMode, WindowResolution},
 };
 use bevy_mod_picking::DefaultPickingPlugins;
 use live::LiveActionPlugin;
+use menu::MenuPlugin;
 use postprocess::PostProcessPlugin;
 
 mod assets;
@@ -18,46 +18,39 @@ mod postprocess;
 mod structure;
 mod ui;
 
-fn setup_ui(mut cmd: Commands) {
-    // Node that fills entire background
-    cmd.spawn(NodeBundle {
-        focus_policy: FocusPolicy::Pass,
-        style: Style {
-            width: Val::Percent(100.),
-            ..default()
-        },
-        ..default()
-    })
-    .with_children(|root| {
-        // Text where we display the title
-        root.spawn(TextBundle {
-            style: Style {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Row,
-                align_content: AlignContent::Center,
-                ..default()
-            },
-            text: Text::from_section(
-                "The Fortress",
-                TextStyle {
-                    font_size: 48.,
-                    ..default()
-                },
-            ),
-            ..default()
-        });
-    });
-}
-
 /// All possible states in the game
 #[derive(States, Default, Debug, Clone, Hash, Eq, PartialEq)]
 pub enum AppState {
+    /// Some kind of splash screen for when the game is loading
     Loading,
     /// The main part of the game
-    #[default]
     Live,
-    MainMenu,
+    /// The menu screen
+    #[default]
+    Menu,
 }
+
+/// Global game settings
+#[derive(Debug, Resource)]
+pub struct GameSettings {
+    /// whether to show the amount of time the player is taking
+    show_timer: bool,
+    /// whether to enable sound
+    sound: bool,
+}
+
+impl Default for GameSettings {
+    fn default() -> Self {
+        Self {
+            show_timer: false,
+            sound: true,
+        }
+    }
+}
+
+/// Marker for the main camera
+#[derive(Component)]
+pub struct CameraMarker;
 
 fn main() {
     App::new()
@@ -86,9 +79,10 @@ fn main() {
                 }),
             PostProcessPlugin,
             LiveActionPlugin,
+            MenuPlugin,
             DefaultPickingPlugins,
         ))
-        .add_systems(Startup, (live::setup_scene, setup_ui))
+        // systems which apply anywhere in the game
         .add_systems(
             Update,
             (
@@ -98,6 +92,8 @@ fn main() {
             ),
         )
         .add_systems(PostUpdate, (effect::apply_glimmer,))
+        // add resources which are used globally
+        .init_resource::<GameSettings>()
         // add resources which we want to be able to load early
         .init_resource::<TextureHandles>()
         // add main state

@@ -5,21 +5,26 @@ use crate::{
     effect::{Glimmers, Wobbles},
     live::obstacle::SimpleTargetBundle,
     postprocess::PostProcessSettings,
+    CameraMarker,
 };
 
 use crate::structure;
 
 use super::{
-    interlude::InterludeSpec, phase::PhaseTrigger, player::spawn_player, spawn_target_icon,
-    CameraMarker,
+    interlude::InterludeSpec,
+    phase::PhaseTrigger,
+    player::spawn_player,
+    spawn_target_icon,
+    weapon::{spawn_weapon_cube, WeaponCubeAssets},
 };
 
-/// set up the 3D scene
+/// set up the main 3D scene
 pub fn setup_scene(
     mut cmd: Commands,
     texture_handles: Res<TextureHandles>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    weapon_cube_assets: Res<WeaponCubeAssets>,
 ) {
     let wall_texture_handle = texture_handles.wall.clone();
     let floor_texture_handle = texture_handles.floor.clone();
@@ -174,7 +179,7 @@ pub fn setup_scene(
 
     // add phase triggers
 
-    // test: add a cube
+    // test: add a target cube
     let test_cube_dim = Vec3::from_array([2., 4., 2.]);
     let test_cube_entity = cmd
         .spawn(SimpleTargetBundle::new_test_cube(
@@ -189,6 +194,16 @@ pub fn setup_scene(
         .id();
 
     spawn_target_icon(&mut cmd, test_cube_entity, 1.into());
+
+    // test: add a weapon cube
+
+    spawn_weapon_cube(
+        &mut cmd,
+        &weapon_cube_assets,
+        materials,
+        Vec3::new(0., 3., 22.),
+        2.into(),
+    );
 
     // test: add an interlude just before the fork
 

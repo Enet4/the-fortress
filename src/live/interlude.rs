@@ -105,12 +105,8 @@ pub fn spawn_interlude(cmd: &mut Commands, spec: InterludeSpec) -> Entity {
                 position_type: PositionType::Absolute,
                 width: Val::Percent(98.),
                 height: Val::Percent(98.),
-                border: UiRect {
-                    left: Val::Px(2.),
-                    right: Val::Px(2.),
-                    top: Val::Px(2.),
-                    bottom: Val::Px(2.),
-                },
+                border: UiRect::all(Val::Px(2.)),
+                margin: UiRect::all(Val::Px(20.)),
                 ..default()
             },
             background_color: Color::BLACK.into(),
@@ -141,7 +137,7 @@ pub fn spawn_interlude(cmd: &mut Commands, spec: InterludeSpec) -> Entity {
                     sections: vec![TextSection {
                         value: message.into(),
                         style: TextStyle {
-                            font_size: 32.,
+                            font_size: 30.,
                             // start invisible, will move up through a system
                             color: Color::srgba(1., 1., 1., 0.),
                             font: Default::default(),
@@ -316,7 +312,7 @@ pub fn process_advance_interlude(
                 // despawn the current interlude
                 cmd.entity(*entity).despawn_recursive();
                 // issue state transition
-                next_root_state.set(AppState::MainMenu);
+                next_root_state.set(AppState::Menu);
             }
         }
     }
