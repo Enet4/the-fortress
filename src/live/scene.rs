@@ -12,6 +12,7 @@ use crate::structure;
 
 use super::{
     interlude::InterludeSpec,
+    mob::MobSpawner,
     phase::PhaseTrigger,
     player::spawn_player,
     weapon::{spawn_weapon_cube, WeaponCubeAssets},
@@ -216,6 +217,15 @@ pub fn setup_scene(
         Vec3::new(0., 1.75, 22.),
         3.into(),
     );
+
+    // test: add a mob spawner
+
+    cmd.spawn((
+        OnLive,
+        PhaseTrigger { at_z: 30. },
+        Transform::from_translation(Vec3::new(0., 4., 45.)),
+        MobSpawner::new(1, 2., vec![2.into()]),
+    ));
 
     // test: add an interlude just before the fork
     cmd.spawn((

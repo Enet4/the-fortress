@@ -51,6 +51,8 @@ enum LiveState {
     Paused,
     /// Showing an interlude message
     ShowingInterlude,
+    /// Defeat screen
+    Defeat,
 }
 
 /// The plugin which adds everything related to the live action
@@ -71,6 +73,7 @@ impl Plugin for LiveActionPlugin {
                 OnExit(AppState::Live),
                 (despawn_all_at::<OnLive>, reset_game),
             )
+            .add_systems(OnEnter(LiveState::Defeat), enter_defeat)
             // systems which should function regardless of the game state
             .add_systems(Update, pause_on_esc.run_if(in_state(AppState::Live)))
             // systems that only run when the game is running
@@ -83,35 +86,23 @@ impl Plugin for LiveActionPlugin {
                     effect::fade_away,
                     effect::apply_rotation,
                     icon::update_icon_opacity,
-                    mob::destroy_spawner_when_done,
                     weapon::update_cooldown,
-                    weapon::trigger_weapon,
-                    weapon::process_new_weapon,
-                    weapon::process_approach_weapon_cube,
                     weapon::weapon_keyboard_input,
                     weapon::weapon_button_action,
-                    weapon::process_weapon_change,
                     weapon::process_weapon_button_selected,
                     weapon::process_weapon_button_deselected,
-                    button_system::<weapon::WeaponButton>,
                     (
                         process_player_movement,
                         apply_velocity,
                         apply_rotation,
                         stay_on_floor,
-                        projectile::projectile_collision,
                     )
                         .chain(),
                     (
-                        process_attacks,
-                        process_target_destroyed,
-                        process_new_target,
                         icon::clear_icons_of_destroyed_things,
-                        process_damage_player,
                         apply_collapse,
                         time_to_live,
                         process_end_of_corridor,
-                        process_live_time,
                         mob::process_spawner_trigger,
                         interlude::process_interlude_trigger,
                         button_system::<Decision>,
@@ -121,11 +112,51 @@ impl Plugin for LiveActionPlugin {
                 )
                     .run_if(in_state(LiveState::Running)),
             )
+            // running at fixed step
+            .add_systems(
+                FixedUpdate,
+                (
+                    projectile::projectile_collision,
+                    process_attacks,
+                    process_target_destroyed,
+                    process_new_target,
+                    mob::spawn_mobs,
+                    mob::destroy_spawner_when_done,
+                    process_damage_player,
+                    process_live_time,
+                    weapon::process_weapon_change,
+                    weapon::trigger_weapon,
+                    weapon::process_new_weapon,
+                    weapon::process_approach_weapon_cube,
+                    button_system::<weapon::WeaponButton>,
+                )
+                    .run_if(in_state(LiveState::Running)),
+            )
+            // paused
             .add_systems(
                 Update,
                 (button_system::<PauseButton>, paused_button_action)
                     .run_if(in_state(LiveState::Paused)),
             )
+            // defeat
+            .add_systems(
+                Update,
+                (
+                    (button_system::<DefeatButton>, defeat_button_action),
+                    (
+                        // these effects are also OK in the defeat screen
+                        effect::apply_wobble,
+                        effect::fade_away,
+                        effect::apply_rotation,
+                        effect::apply_velocity,
+                        stay_on_floor,
+                        icon::update_icon_opacity,
+                    )
+                        .chain(),
+                )
+                    .run_if(in_state(LiveState::Defeat)),
+            )
+            // interlude
             .add_systems(
                 Update,
                 (
@@ -159,6 +190,12 @@ fn start_running(mut next_state: ResMut<NextState<LiveState>>) {
 fn reset_game(mut next_state: ResMut<NextState<LiveState>>, mut live_time: ResMut<LiveTime>) {
     next_state.set(LiveState::default());
     live_time.reset();
+}
+
+fn enter_defeat(mut defeat_div_q: Query<&mut Style, With<DefeatDiv>>) {
+    for mut style in defeat_div_q.iter_mut() {
+        style.display = Display::Flex;
+    }
 }
 
 /// Marker component for everything in live mode
@@ -208,7 +245,7 @@ fn pause_on_esc(
                 }
                 println!("Game resumed");
             }
-            LiveState::ShowingInterlude => {
+            LiveState::ShowingInterlude | LiveState::Defeat => {
                 // ignore
             }
         }
@@ -276,6 +313,20 @@ struct PauseButton;
 #[derive(Debug, Component)]
 enum PausedButtonAction {
     Resume,
+    GiveUp,
+}
+
+/// Marker component for the UI node that shows defeat
+#[derive(Debug, Default, Component)]
+struct DefeatDiv;
+
+/// Group marker component for the buttons in the defeat screen
+#[derive(Debug, Default, Component)]
+struct DefeatButton;
+
+#[derive(Debug, Component)]
+enum DefeatButtonAction {
+    Restart,
     GiveUp,
 }
 
@@ -355,8 +406,60 @@ fn setup_ui(mut cmd: Commands) {
         // button to return to main menu
         spawn_button_in_group(cmd, "Give Up", PauseButton, PausedButtonAction::GiveUp);
     });
+
+    // node for the defeat screen, which is also hidden by default
+    cmd.spawn((
+        DefeatDiv,
+        OnLive,
+        NodeBundle {
+            style: Style {
+                display: Display::None,
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
+                ..default()
+            },
+            z_index: ZIndex::Global(10),
+            background_color: BackgroundColor(Color::srgba(1., 0., 0., 0.25)),
+            ..default()
+        },
+    ))
+    .with_children(|cmd| {
+        cmd.spawn(TextBundle {
+            style: Style {
+                margin: UiRect {
+                    bottom: Val::Px(32.),
+                    ..default()
+                },
+                ..default()
+            },
+            text: Text::from_section(
+                "Try Again?",
+                TextStyle {
+                    color: Color::srgb(0.85, 0.85, 0.85),
+                    font_size: 32.,
+                    ..default()
+                },
+            ),
+            ..default()
+        });
+
+        // button to restart the current level
+        spawn_button_in_group(
+            cmd,
+            "Restart Level",
+            DefeatButton,
+            DefeatButtonAction::Restart,
+        );
+
+        // button to return to main menu
+        spawn_button_in_group(cmd, "Give Up", DefeatButton, DefeatButtonAction::GiveUp);
+    });
 }
 
+/// system which handles button presses in the paused screen
 fn paused_button_action(
     mut interaction_query: Query<
         (&Interaction, &PausedButtonAction),
@@ -377,6 +480,32 @@ fn paused_button_action(
                     println!("Game resumed");
                 }
                 PausedButtonAction::GiveUp => {
+                    // return to main menu
+                    game_state.set(AppState::Menu);
+                    println!("Giving up...");
+                }
+            }
+        }
+    }
+}
+
+/// system which handles button presses in the defeat screen
+fn defeat_button_action(
+    mut interaction_query: Query<
+        (&Interaction, &DefeatButtonAction),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut defeat_node_q: Query<&mut Style, With<DefeatDiv>>,
+    mut live_state: ResMut<NextState<LiveState>>,
+    mut game_state: ResMut<NextState<AppState>>,
+) {
+    for (interaction, pause_button_action) in &mut interaction_query {
+        if *interaction == Interaction::Pressed {
+            match pause_button_action {
+                DefeatButtonAction::Restart => {
+                    // TODO
+                }
+                DefeatButtonAction::GiveUp => {
                     // return to main menu
                     game_state.set(AppState::Menu);
                     println!("Giving up...");

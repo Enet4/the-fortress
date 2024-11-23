@@ -4,7 +4,7 @@ use bevy::{ecs::system::EntityCommands, prelude::*};
 
 use crate::{
     cheat::Cheats,
-    effect::{Collapsing, TimeToLive, Velocity},
+    effect::{Collapsing, StaysOnFloor, TimeToLive, Velocity},
     live::Target,
     logic::{test_attack_on, AttackTest},
     postprocess::PostProcessSettings,
@@ -13,7 +13,7 @@ use crate::{
 
 use super::{
     weapon::{AttackCooldown, PlayerAttack},
-    CooldownMeter, Health, HealthMeter, OnLive,
+    CooldownMeter, Health, HealthMeter, LiveState, OnLive,
 };
 
 /// Marker for the player
@@ -109,7 +109,7 @@ pub fn process_attacks(
 
         // apply the attack
         match attack_result {
-            AttackTest::Effective(None) => {
+            AttackTest::Effective(new_num) => {
                 if let Some(mut health) = health {
                     // damage the target
                     health.value -= 1.;
@@ -121,6 +121,11 @@ pub fn process_attacks(
                             TimeToLive(0.5),
                         ));
                         target_destroyed_events.send(TargetDestroyed);
+                    } else {
+                        // update target with its new number
+                        if let Some(num) = new_num {
+                            target.num = num;
+                        }
                     }
                 } else {
                     // with no health, the target is destroyed
@@ -133,9 +138,6 @@ pub fn process_attacks(
                     // send event for target destroyed
                     target_destroyed_events.send(TargetDestroyed);
                 }
-            }
-            AttackTest::Effective(Some(new_num)) => {
-                target.num = new_num;
             }
             AttackTest::Failed => {
                 // nope, damage the player back
@@ -156,6 +158,7 @@ pub fn process_damage_player(
     cheats: Res<Cheats>,
     mut player_q: Query<(Entity, &mut Health), With<Player>>,
     mut postprocess_settings_q: Query<&mut PostProcessSettings>,
+    mut next_state: ResMut<NextState<LiveState>>,
 ) {
     if cheats.invulnerability {
         return;
@@ -170,22 +173,28 @@ pub fn process_damage_player(
         player_health.value -= damage;
 
         // update postprocess settings
-        for mut settings in postprocess_settings_q.iter_mut() {
-            settings.intensity = (settings.intensity + 0.5).min(0.75);
-            if player_health.value < 0.125 {
+        if let Ok(mut settings) = postprocess_settings_q.get_single_mut() {
+            settings.add_intensity(0.5);
+            if player_health.value <= 0.2 {
                 settings.oscillate = 0.45;
-            } else if player_health.value < 0.25 {
+            } else if player_health.value < 0.3 {
                 settings.oscillate = 0.25;
             } else if player_health.value < 0.5 {
                 settings.oscillate = 0.1;
             } else {
-                settings.oscillate = 0.01;
+                settings.oscillate = 0.;
             }
         }
 
         if player_health.value <= 0. {
             // player is dead
-            cmd.entity(player_entity).insert(Collapsing::default());
+            cmd.entity(player_entity).insert((
+                Velocity(Vec3::new(0., 3., -2.)),
+                Collapsing::default(),
+                StaysOnFloor,
+            ));
+            // enter try again screen
+            next_state.set(LiveState::Defeat)
         }
     }
 }

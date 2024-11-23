@@ -8,7 +8,7 @@ pub struct Collidable {
 }
 
 impl Collidable {
-    pub fn from_dimensions(dim: Vec3) -> Self {
+    pub fn new(dim: Vec3) -> Self {
         Self { dim }
     }
 
@@ -19,6 +19,6 @@ impl Collidable {
 
 impl Default for Collidable {
     fn default() -> Self {
-        Self::from_dimensions(Vec3::new(1., 1., 1.))
+        Self::new(Vec3::new(1., 1., 1.))
     }
 }

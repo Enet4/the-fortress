@@ -294,29 +294,35 @@ pub struct PostProcessSettings {
     pub _webgl2_padding: Vec3,
 }
 
+impl PostProcessSettings {
+    pub fn add_intensity(&mut self, value: f32) {
+        self.intensity = (self.intensity + value).max(1.);
+    }
+}
+
 /// Oscillate the intensity of the dithering effect
 pub fn oscillate_dithering(mut settings: Query<&mut PostProcessSettings>, time: Res<Time>) {
-    for mut setting in &mut settings {
-        if setting.oscillate == 0. {
-            continue;
-        }
-
-        let mut intensity = time.elapsed_seconds();
-        // Make it loop periodically
-        intensity = (intensity - std::f32::consts::PI / 2.).sin();
-        // Remap it to 0..0.1
-        intensity = intensity * setting.oscillate + setting.oscillate;
-
-        // Set the intensity.
-        // This will then be extracted to the render world and uploaded to the gpu automatically by the [`UniformComponentPlugin`]
-        setting.intensity = intensity;
+    let Ok(mut setting) = settings.get_single_mut() else {
+        return;
+    };
+    if setting.oscillate == 0. {
+        return;
     }
+
+    // Make it loop periodically
+    let intensity = (time.elapsed_seconds() - std::f32::consts::PI / 2.).sin();
+    // Remap it to 0..0.1
+    let intensity = intensity * setting.oscillate + setting.oscillate;
+
+    // Set the intensity.
+    // This will then be extracted to the render world and uploaded to the gpu automatically by the [`UniformComponentPlugin`]
+    setting.intensity = intensity;
 }
 
 /// Diminish the intensity of the dithering effect over time
 pub fn fadeout_dithering(mut settings: Query<&mut PostProcessSettings>, time: Res<Time>) {
     for mut setting in &mut settings {
-        let d = (time.delta_seconds_f64() as f32) * 0.1;
+        let d = (time.delta_seconds_f64() as f32) * 1.5;
 
         // Apply the intensity
         setting.intensity = (setting.intensity - d).max(0.0);

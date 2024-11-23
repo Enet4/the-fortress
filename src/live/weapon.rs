@@ -10,6 +10,7 @@ use bevy_mod_picking::prelude::*;
 use crate::{
     effect::{Rotating, TimeToLive, Velocity},
     logic::Num,
+    postprocess::PostProcessSettings,
 };
 
 use super::{
@@ -51,7 +52,7 @@ impl Default for PlayerWeapon {
 }
 
 pub fn install_weapon(cmd: &mut Commands, num: Num) {
-    cmd.spawn(PlayerWeapon::new(num));
+    cmd.spawn((OnLive, PlayerWeapon::new(num)));
 }
 
 /// Marker component representing the weapon currently wielded by the player.
@@ -324,6 +325,7 @@ pub fn spawn_weapon_cube(
 pub fn process_approach_weapon_cube(
     mut cmd: Commands,
     player_q: Query<&Transform, With<Player>>,
+    mut postprocess_settings_q: Query<&mut PostProcessSettings>,
     mut weapon_cube_q: Query<(Entity, &Transform, &WeaponCube, &mut Rotating)>,
 ) {
     let Ok(player_transform) = player_q.get_single() else {
@@ -345,14 +347,20 @@ pub fn process_approach_weapon_cube(
             // remove weapon cube marker
             cmd.entity(entity).remove::<WeaponCube>();
             install_weapon(&mut cmd, weapon_cube.num);
+
+            // add a visual effect
+            if let Ok(mut settings) = postprocess_settings_q.get_single_mut() {
+                settings.add_intensity(0.08);
+            }
         }
     }
 }
 
 /// system to check keypresses for weapon shortcuts
 pub fn weapon_keyboard_input(
+    mut cmd: Commands,
     mut keyboard_input: EventReader<KeyboardInput>,
-    weapon_button_q: Query<&WeaponButton>,
+    weapon_button_q: Query<(Entity, &WeaponButton, Has<WeaponSelected>)>,
     mut change_weapon: EventWriter<ChangeWeapon>,
 ) {
     for ev in keyboard_input.read() {
@@ -365,13 +373,20 @@ pub fn weapon_keyboard_input(
             if ('1'..='9').contains(&c) {
                 let shortcut = (c as u8 - b'0') as u8;
 
-                // look up the weapon button
-                for weapon_button in &weapon_button_q {
+                // look up each weapon button and update selection
+                for (entity, weapon_button, is_selected) in &weapon_button_q {
                     if weapon_button.shortcut == shortcut {
+                        if is_selected {
+                            // no change is needed, stop here
+                            break;
+                        }
                         let num = weapon_button.num;
+                        cmd.entity(entity).insert(WeaponSelected);
                         // perform weapon selection
                         change_weapon.send(ChangeWeapon { num });
                         break;
+                    } else {
+                        cmd.entity(entity).remove::<WeaponSelected>();
                     }
                 }
             }
@@ -433,7 +448,7 @@ pub struct ChangeWeapon {
 
 pub fn process_weapon_change(
     mut events: EventReader<ChangeWeapon>,
-    mut weapon_q: Query<&mut PlayerWeapon>,
+    mut weapon_q: Query<&mut PlayerWeapon, With<WeaponSelected>>,
 ) {
     for ChangeWeapon { num, .. } in events.read() {
         // update the weapon characteristics
