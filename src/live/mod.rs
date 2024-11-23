@@ -8,6 +8,7 @@ use bevy_mod_picking::{
 pub mod collision;
 mod icon;
 mod interlude;
+mod levels;
 mod mob;
 pub mod obstacle;
 mod phase;
@@ -17,6 +18,7 @@ mod scene;
 mod weapon;
 
 use interlude::AdvanceInterlude;
+use levels::CurrentLevel;
 use player::{
     process_attacks, process_damage_player, process_player_movement, update_player_cooldown_meter,
     update_player_health_meter, DamagePlayer, Player, PlayerMovement, TargetDestroyed,
@@ -44,8 +46,10 @@ use super::CameraMarker;
 #[derive(SubStates, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[source(AppState = AppState::Live)]
 enum LiveState {
-    /// Running
+    /// Intermediate state for loading a new level
     #[default]
+    LoadingLevel,
+    /// Running
     Running,
     /// On pause screen
     Paused,
@@ -67,6 +71,28 @@ impl Plugin for LiveActionPlugin {
             .add_systems(
                 OnEnter(AppState::Live),
                 (scene::setup_scene, setup_ui, start_running).chain(),
+            )
+            // partial live game take-down when exiting Running and entering Loading
+            .add_systems(
+                OnTransition {
+                    exited: LiveState::Running,
+                    entered: LiveState::LoadingLevel,
+                },
+                (
+                    despawn_all_at::<OnLive>,
+                    scene::setup_scene,
+                    setup_ui,
+                    start_running,
+                )
+                    .chain(),
+            )
+            // partial live game take-down when exiting Defeat and entering Loading
+            .add_systems(
+                OnTransition {
+                    exited: LiveState::Defeat,
+                    entered: LiveState::LoadingLevel,
+                },
+                despawn_all_at::<OnLive>,
             )
             // live game take-down
             .add_systems(
@@ -129,6 +155,7 @@ impl Plugin for LiveActionPlugin {
                     weapon::process_new_weapon,
                     weapon::process_approach_weapon_cube,
                     button_system::<weapon::WeaponButton>,
+                    on_enter_next_level,
                 )
                     .run_if(in_state(LiveState::Running)),
             )
@@ -168,6 +195,7 @@ impl Plugin for LiveActionPlugin {
                     .run_if(in_state(LiveState::ShowingInterlude)),
             )
             // resources
+            .init_resource::<CurrentLevel>()
             .init_resource::<LiveTime>()
             .init_resource::<ProjectileAssets>()
             .init_resource::<WeaponCubeAssets>()
@@ -179,7 +207,8 @@ impl Plugin for LiveActionPlugin {
             .add_event::<PlayerAttack>()
             .add_event::<TargetDestroyed>()
             .add_event::<DamagePlayer>()
-            .add_event::<AdvanceInterlude>();
+            .add_event::<AdvanceInterlude>()
+            .add_event::<AdvanceLevel>();
     }
 }
 
@@ -245,7 +274,7 @@ fn pause_on_esc(
                 }
                 println!("Game resumed");
             }
-            LiveState::ShowingInterlude | LiveState::Defeat => {
+            LiveState::LoadingLevel | LiveState::ShowingInterlude | LiveState::Defeat => {
                 // ignore
             }
         }
@@ -503,15 +532,19 @@ fn defeat_button_action(
         if *interaction == Interaction::Pressed {
             match pause_button_action {
                 DefeatButtonAction::Restart => {
-                    // TODO
+                    let Ok(mut defeat_node_style) = defeat_node_q.get_single_mut() else {
+                        break;
+                    };
+                    defeat_node_style.display = Display::None;
+                    live_state.set(LiveState::LoadingLevel);
                 }
                 DefeatButtonAction::GiveUp => {
                     // return to main menu
                     game_state.set(AppState::Menu);
-                    println!("Giving up...");
                 }
             }
         }
+        break;
     }
 }
 
@@ -599,7 +632,7 @@ pub fn process_end_of_corridor(
 #[derive(Debug, Component)]
 struct DecisionArrowsDiv;
 
-#[derive(Debug, Component)]
+#[derive(Debug, Copy, Clone, PartialEq, Component)]
 enum Decision {
     Left,
     Right,
@@ -671,13 +704,28 @@ fn spawn_decision_arrows(cmd: &mut Commands) {
 /// system that handles the choice of the player
 fn decision_action(
     mut interaction_query: Query<(&Interaction, &Decision), (Changed<Interaction>, With<Button>)>,
-    mut live_state: ResMut<NextState<LiveState>>,
-    mut game_state: ResMut<NextState<AppState>>,
+    mut advance_level_events: EventWriter<AdvanceLevel>,
 ) {
     for (interaction, decision) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
-            // TODO
-            println!("TODO apply {decision:?}");
+            advance_level_events.send(AdvanceLevel(*decision));
+            break;
         }
+    }
+}
+
+/// Event for when the game will advance to the next level
+#[derive(Debug, Event)]
+struct AdvanceLevel(Decision);
+
+fn on_enter_next_level(
+    mut events: EventReader<AdvanceLevel>,
+    mut current_level: ResMut<CurrentLevel>,
+    mut next_state: ResMut<NextState<LiveState>>,
+) {
+    for AdvanceLevel(decision) in events.read() {
+        current_level.advance(*decision);
+        next_state.set(LiveState::LoadingLevel);
+        break;
     }
 }

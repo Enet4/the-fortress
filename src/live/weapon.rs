@@ -337,7 +337,7 @@ pub fn process_approach_weapon_cube(
         let weapon_corridor_pos = weapon_transform.translation.z;
         let distance = (player_corridor_pos - weapon_corridor_pos).abs();
 
-        if distance < 12. {
+        if distance < 9.5 {
             // make an effect
             cmd.entity(entity).insert(Velocity(Vec3::new(0., 1., 0.)));
             // increase rotation speed
@@ -350,7 +350,7 @@ pub fn process_approach_weapon_cube(
 
             // add a visual effect
             if let Ok(mut settings) = postprocess_settings_q.get_single_mut() {
-                settings.add_intensity(0.08);
+                settings.add_intensity(0.05);
             }
         }
     }

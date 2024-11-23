@@ -17,7 +17,7 @@ use super::{
 };
 
 /// Component representing a spawner of mobs.
-#[derive(Debug, Component)]
+#[derive(Debug, Clone, Component)]
 pub struct MobSpawner {
     /// time to wait between each spawn
     pub spawn_interval: f32,
@@ -93,6 +93,10 @@ pub fn process_spawner_trigger(
     }
 }
 
+/// Z offset where mobs are spawned
+/// relative to the mob spawner position
+const MOB_SPAWN_Z_OFFSET: f32 = 12.;
+
 /// system that makes active mob spawners spawn mobs
 pub fn spawn_mobs(
     mut cmd: Commands,
@@ -109,7 +113,8 @@ pub fn spawn_mobs(
         if relative_elapsed >= spawner.spawn_interval {
             // spawn a mob
             // TODO use an RNG to pseudorandomize the position
-            let new_pos = transform.translation + Vec3::new(0., 0., spawner.count as f32 * 0.2);
+            let new_pos = transform.translation
+                + Vec3::new(0., 0., MOB_SPAWN_Z_OFFSET + spawner.count as f32 * 0.2);
             // TODO use RNG to randomize num choice
             let new_num = spawner.target_options[0];
 
@@ -153,7 +158,7 @@ pub struct MobAssets {
     material: Handle<StandardMaterial>,
 }
 
-const TARGET_SIZE: f32 = 3.;
+const TARGET_SIZE: f32 = 2.75;
 
 impl FromWorld for MobAssets {
     fn from_world(world: &mut World) -> Self {

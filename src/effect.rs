@@ -153,7 +153,7 @@ pub fn scale_up(
     time: Res<Time>,
     mut q: Query<(Entity, &mut Transform, &ScalesUp)>,
 ) {
-    const SPEED_FACTOR: f32 = 2.5;
+    const SPEED_FACTOR: f32 = 2.75;
     let delta = time.delta_seconds();
     for (entity, mut transform, _) in q.iter_mut() {
         let scale = transform.scale;

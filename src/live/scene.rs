@@ -3,7 +3,7 @@ use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Expo
 use crate::{
     assets::TextureHandles,
     effect::{Glimmers, Wobbles},
-    live::{obstacle::SimpleTargetBundle, OnLive},
+    live::OnLive,
     postprocess::PostProcessSettings,
     CameraMarker,
 };
@@ -11,22 +11,27 @@ use crate::{
 use crate::structure;
 
 use super::{
-    interlude::InterludeSpec,
-    mob::MobSpawner,
+    levels::{CurrentLevel, Thing, ThingKind},
     phase::PhaseTrigger,
     player::spawn_player,
     weapon::{spawn_weapon_cube, WeaponCubeAssets},
 };
 
 /// set up the main 3D scene
+/// based on the current level specification
 pub fn setup_scene(
     mut cmd: Commands,
     texture_handles: Res<TextureHandles>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     weapon_cube_assets: Res<WeaponCubeAssets>,
+    current_level: Res<CurrentLevel>,
 ) {
-    let corridor_length = 80.;
+    let CurrentLevel {
+        id: _,
+        spec: level_spec,
+    } = &*current_level;
+    let corridor_length = level_spec.corridor_length;
 
     let wall_texture_handle = texture_handles.wall.clone();
     let floor_texture_handle = texture_handles.floor.clone();
@@ -117,7 +122,7 @@ pub fn setup_scene(
     );
 
     // add the player, attach a camera to it, then add a light to the camera
-    spawn_player(&mut cmd, Vec3::new(0., 2.5, -5.0)).with_children(|cmd| {
+    spawn_player(&mut cmd, Vec3::new(0., 2.5, 0.)).with_children(|cmd| {
         // wobbly pivot point for the camera and light
         cmd.spawn((
             TransformBundle::default(),
@@ -180,63 +185,34 @@ pub fn setup_scene(
         });
     });
 
-    // add phase triggers
+    // add things in the level
 
-    // add the first weapon cube
-
-    spawn_weapon_cube(
-        &mut cmd,
-        &weapon_cube_assets,
-        &mut materials,
-        Vec3::new(0., 1.75, 0.),
-        2.into(),
-    );
-
-    // test: add a target cube
-    let test_cube_dim = Vec3::from_array([2., 4., 2.]);
-    let test_cube_entity = cmd
-        .spawn(SimpleTargetBundle::new_test_cube(
-            Vec3::new(2., 2., 12.),
-            test_cube_dim,
-            meshes.add(Cuboid::from_size(test_cube_dim)).into(),
-            materials.add(StandardMaterial {
-                base_color: Color::srgba_u8(255, 0, 0, 255),
-                ..default()
-            }),
-        ))
-        .id();
-
-    super::icon::spawn_target_icon(&mut cmd, test_cube_entity, 1.into());
-
-    // test: add another weapon cube
-
-    spawn_weapon_cube(
-        &mut cmd,
-        &weapon_cube_assets,
-        &mut materials,
-        Vec3::new(0., 1.75, 22.),
-        3.into(),
-    );
-
-    // test: add a mob spawner
-
-    cmd.spawn((
-        OnLive,
-        PhaseTrigger { at_z: 30. },
-        Transform::from_translation(Vec3::new(0., 4., 45.)),
-        MobSpawner::new(1, 2., vec![2.into()]),
-    ));
-
-    // test: add an interlude just before the fork
-    cmd.spawn((
-        OnLive,
-        PhaseTrigger::new_by_corridor(corridor_length, 0.85),
-        InterludeSpec::from_sequence([
-            (
-                "At the end of the corridor, you see two possible paths.\n\nThere appear to be no distinct visual cues between the two.",
-                None,
-            ),
-            ("Reluctantly, you follow your instinct and choose.", None),
-        ]),
-    ));
+    for Thing { at, what } in &level_spec.things {
+        match what {
+            ThingKind::WeaponCube { x, num } => {
+                spawn_weapon_cube(
+                    &mut cmd,
+                    &weapon_cube_assets,
+                    &mut materials,
+                    Vec3::new(*x, 1.75, *at * corridor_length),
+                    *num,
+                );
+            }
+            ThingKind::MobSpawner(spawner) => {
+                cmd.spawn((
+                    OnLive,
+                    PhaseTrigger::new_by_corridor(corridor_length, *at),
+                    Transform::from_translation(Vec3::new(0., 4., *at * corridor_length)),
+                    spawner.clone(),
+                ));
+            }
+            ThingKind::Interlude(spec) => {
+                cmd.spawn((
+                    OnLive,
+                    PhaseTrigger::new_by_corridor(corridor_length, *at),
+                    spec.clone(),
+                ));
+            }
+        }
+    }
 }

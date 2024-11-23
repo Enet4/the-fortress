@@ -39,6 +39,9 @@ pub struct GameSettings {
     show_timer: bool,
     /// whether to enable sound
     sound: bool,
+    /// whether to skip interludes
+    /// (it will not skip the ones ending the game at the end of the sequence)
+    skip_interludes: bool,
 }
 
 impl Default for GameSettings {
@@ -46,6 +49,7 @@ impl Default for GameSettings {
         Self {
             show_timer: false,
             sound: true,
+            skip_interludes: false,
         }
     }
 }

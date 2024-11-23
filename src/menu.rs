@@ -52,6 +52,7 @@ enum MenuButtonAction {
     // - options -
     ToggleSound,
     ToggleTimer,
+    ToggleInterludes,
     /// return to main menu
     BackToMainMenu,
 }
@@ -172,9 +173,12 @@ pub fn settings_menu_setup(mut cmd: Commands) {
     ))
     .with_children(|cmd| {
         spawn_button(cmd, "Show Timer: OFF", MenuButtonAction::ToggleTimer);
-        // open options
+        spawn_button(
+            cmd,
+            "Skip Interludes: OFF",
+            MenuButtonAction::ToggleInterludes,
+        );
         spawn_button(cmd, "Sound: ON", MenuButtonAction::ToggleSound);
-        // button to exit the game
         spawn_button(cmd, "Back", MenuButtonAction::BackToMainMenu);
     });
 }
@@ -222,6 +226,20 @@ fn menu_action(
                         "Show Timer: ON"
                     } else {
                         "Show Timer: OFF"
+                    };
+                    for child in children {
+                        if let Ok(mut text) = button_text_q.get_mut(*child) {
+                            text.sections[0].value = new_text.to_string();
+                        }
+                    }
+                }
+
+                MenuButtonAction::ToggleInterludes => {
+                    settings.skip_interludes = !settings.skip_interludes;
+                    let new_text = if settings.skip_interludes {
+                        "Skip Interludes: ON"
+                    } else {
+                        "Skip Interludes: OFF"
                     };
                     for child in children {
                         if let Ok(mut text) = button_text_q.get_mut(*child) {

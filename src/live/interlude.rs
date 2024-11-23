@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 
-use crate::AppState;
+use crate::{AppState, GameSettings};
 
 use super::{phase::PhaseTrigger, player::Player, LiveState};
 
@@ -66,6 +66,15 @@ impl InterludeSpec {
 
     pub fn new_text_single(message: impl Into<String>) -> Self {
         Self::new_text(message, InterludeEffect::Resume)
+    }
+
+    /// whether reaching this interlude also means the end of the game
+    pub fn is_exit(&self) -> bool {
+        match &self.effect {
+            InterludeEffect::Exit => true,
+            InterludeEffect::Resume => false,
+            InterludeEffect::Next(spec) => spec.is_exit(),
+        }
     }
 }
 
@@ -141,7 +150,7 @@ pub fn spawn_interlude(cmd: &mut Commands, spec: InterludeSpec) -> Entity {
                 InterludePiece,
                 TextBundle {
                     style: Style {
-                        height: Val::Percent(100.),
+                        margin: UiRect::all(Val::Auto),
                         ..default()
                     },
                     text: Text {
@@ -193,6 +202,7 @@ pub fn spawn_interlude(cmd: &mut Commands, spec: InterludeSpec) -> Entity {
 
 pub fn process_interlude_trigger(
     mut cmd: Commands,
+    game_settings: Res<GameSettings>,
     trigger_q: Query<(Entity, &InterludeSpec, &PhaseTrigger)>,
     player_q: Query<&Transform, With<Player>>,
     mut next_state: ResMut<NextState<LiveState>>,
@@ -203,6 +213,11 @@ pub fn process_interlude_trigger(
 
     for (entity, spec, trigger) in trigger_q.iter() {
         if trigger.should_trigger(&player_transform.translation) {
+            // do not show interludes which just resume the game afterwards
+            if game_settings.skip_interludes && !spec.is_exit() {
+                continue;
+            }
+
             // spawn the interlude
             spawn_interlude(&mut cmd, spec.clone());
             // despawn the trigger
@@ -309,28 +324,25 @@ pub fn process_advance_interlude(
 ) {
     for event in events.read() {
         let AdvanceInterlude(entity, effect) = event;
-        match effect {
-            InterludeEffect::Next(next_spec) => {
-                // despawn the current interlude
-                // (using `get_entity` because there is a race condition
-                // which might trigger this event more than once for the same step)
-                if let Some(e_cmd) = cmd.get_entity(*entity) {
-                    e_cmd.despawn_recursive();
+        // despawn the current interlude
+        // (using `get_entity` because there is a race condition
+        // which might trigger this event more than once for the same step)
+        if let Some(e_cmd) = cmd.get_entity(*entity) {
+            e_cmd.despawn_recursive();
+
+            match effect {
+                InterludeEffect::Next(next_spec) => {
                     // spawn the next interlude
                     spawn_interlude(&mut cmd, *next_spec.clone());
                 }
-            }
-            InterludeEffect::Resume => {
-                // despawn the current interlude
-                cmd.entity(*entity).despawn_recursive();
-                // issue a state transition back to live
-                next_live_state.set(LiveState::Running);
-            }
-            InterludeEffect::Exit => {
-                // despawn the current interlude
-                cmd.entity(*entity).despawn_recursive();
-                // issue state transition
-                next_root_state.set(AppState::Menu);
+                InterludeEffect::Resume => {
+                    // issue a state transition back to live
+                    next_live_state.set(LiveState::Running);
+                }
+                InterludeEffect::Exit => {
+                    // issue state transition back to menu
+                    next_root_state.set(AppState::Menu);
+                }
             }
         }
         break;

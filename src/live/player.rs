@@ -38,9 +38,9 @@ pub struct PlayerBundle {
 #[derive(Debug, Default, Component)]
 pub enum PlayerMovement {
     /// Idle, usually awaiting input or facing enemies
-    #[default]
     Idle,
     /// Moving along the corridor
+    #[default]
     Walking,
     /// Stopping abruptly
     Halting,
