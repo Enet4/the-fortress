@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    despawn_all_at,
     ui::{button_system, spawn_button},
     AppState, CameraMarker, GameSettings,
 };
@@ -10,8 +11,10 @@ use crate::{
 #[derive(SubStates, Debug, Default, Clone, Eq, Hash, PartialEq)]
 #[source(AppState = AppState::Menu)]
 enum MenuState {
-    /// The main menu root
+    /// Initializing the main menu
     #[default]
+    Init,
+    /// The main menu root
     Main,
     /// A separate section for the settings screen
     Settings,
@@ -35,7 +38,7 @@ impl Plugin for MenuPlugin {
             .add_systems(OnExit(AppState::Menu), despawn_all_at::<MenuScreen>)
             .add_systems(
                 Update,
-                (menu_action, button_system).run_if(in_state(AppState::Menu)),
+                (menu_action, button_system::<Button>).run_if(in_state(AppState::Menu)),
             );
     }
 }
@@ -58,7 +61,7 @@ enum MenuButtonAction {
 struct MenuScreen;
 
 /// system to set up the menu UI (applies to all menu sections)
-pub fn menu_setup(mut cmd: Commands) {
+fn menu_setup(mut cmd: Commands, mut next_state: ResMut<NextState<MenuState>>) {
     // Title
     cmd.spawn((
         MenuScreen,
@@ -103,6 +106,8 @@ pub fn menu_setup(mut cmd: Commands) {
         IsDefaultUiCamera,
         Camera2dBundle::default(),
     ));
+
+    next_state.set(MenuState::Main);
 }
 
 #[derive(Debug, Component)]
@@ -166,31 +171,26 @@ pub fn settings_menu_setup(mut cmd: Commands) {
         },
     ))
     .with_children(|cmd| {
-        spawn_button(cmd, "Show Timer: Disabled", MenuButtonAction::ToggleTimer);
+        spawn_button(cmd, "Show Timer: OFF", MenuButtonAction::ToggleTimer);
         // open options
-        spawn_button(cmd, "Sound: Enabled", MenuButtonAction::ToggleSound);
+        spawn_button(cmd, "Sound: ON", MenuButtonAction::ToggleSound);
         // button to exit the game
         spawn_button(cmd, "Back", MenuButtonAction::BackToMainMenu);
     });
 }
 
-fn despawn_all_at<T: Component>(mut cmd: Commands, query: Query<Entity, With<T>>) {
-    for entity in query.iter() {
-        cmd.entity(entity).despawn_recursive();
-    }
-}
-
 fn menu_action(
-    interaction_query: Query<
-        (&Interaction, &MenuButtonAction),
+    mut interaction_query: Query<
+        (&Interaction, &MenuButtonAction, &Children),
         (Changed<Interaction>, With<Button>),
     >,
     mut app_exit_events: EventWriter<AppExit>,
     mut menu_state: ResMut<NextState<MenuState>>,
     mut game_state: ResMut<NextState<AppState>>,
     mut settings: ResMut<GameSettings>,
+    mut button_text_q: Query<&mut Text>,
 ) {
-    for (interaction, menu_button_action) in &interaction_query {
+    for (interaction, menu_button_action, children) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
             match menu_button_action {
                 MenuButtonAction::Exit => {
@@ -205,23 +205,29 @@ fn menu_action(
 
                 MenuButtonAction::ToggleSound => {
                     settings.sound = !settings.sound;
-                    let text = if settings.sound {
-                        "Sound: Enabled"
+                    let new_text = if settings.sound {
+                        "Sound: ON"
                     } else {
-                        "Sound: Disabled"
+                        "Sound: OFF"
                     };
-                    println!("{}", text);
-                    // TODO update button text accordingkly
+                    for child in children {
+                        if let Ok(mut text) = button_text_q.get_mut(*child) {
+                            text.sections[0].value = new_text.to_string();
+                        }
+                    }
                 }
                 MenuButtonAction::ToggleTimer => {
                     settings.show_timer = !settings.show_timer;
-                    let text = if settings.show_timer {
-                        "Show Timer: Enabled"
+                    let new_text = if settings.show_timer {
+                        "Show Timer: ON"
                     } else {
-                        "Show Timer: Disabled"
+                        "Show Timer: OFF"
                     };
-                    println!("{}", text);
-                    // TODO update button text accordingly
+                    for child in children {
+                        if let Ok(mut text) = button_text_q.get_mut(*child) {
+                            text.sections[0].value = new_text.to_string();
+                        }
+                    }
                 }
             }
         }

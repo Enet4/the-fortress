@@ -3,6 +3,7 @@
 use bevy::{ecs::system::EntityCommands, prelude::*};
 
 use crate::{
+    cheat::Cheats,
     effect::{Collapsing, TimeToLive, Velocity},
     live::Target,
     logic::{test_attack_on, AttackTest},
@@ -11,8 +12,8 @@ use crate::{
 };
 
 use super::{
-    weapon::{AttackCooldown, PlayerAttack, Weapon},
-    CooldownMeter, Health, HealthMeter,
+    weapon::{AttackCooldown, PlayerAttack},
+    CooldownMeter, Health, HealthMeter, OnLive,
 };
 
 /// Marker for the player
@@ -30,6 +31,7 @@ pub struct PlayerBundle {
     transform: TransformBundle,
     #[bundle()]
     visibility: VisibilityBundle,
+    on_live: OnLive,
 }
 
 /// The state of the player in terms of movement
@@ -105,7 +107,6 @@ pub fn process_attacks(
         // evaluate the attack
         let attack_result = test_attack_on(&target, *num);
 
-        println!("Attack result: {:?}", attack_result);
         // apply the attack
         match attack_result {
             AttackTest::Effective(None) => {
@@ -152,9 +153,14 @@ pub struct DamagePlayer {
 pub fn process_damage_player(
     mut cmd: Commands,
     mut events: EventReader<DamagePlayer>,
+    cheats: Res<Cheats>,
     mut player_q: Query<(Entity, &mut Health), With<Player>>,
     mut postprocess_settings_q: Query<&mut PostProcessSettings>,
 ) {
+    if cheats.invulnerability {
+        return;
+    }
+
     for DamagePlayer { damage } in events.read() {
         // TODO play sound effect
 
@@ -187,7 +193,7 @@ pub fn process_damage_player(
 /// system for updating the cooldown meter
 /// based on the selected weapon cooldown
 pub fn update_player_cooldown_meter(
-    query: Query<&AttackCooldown, With<Weapon>>,
+    query: Query<&AttackCooldown, With<Player>>,
     mut meter_query: Query<(&mut Style, &mut BackgroundColor), (With<Meter>, With<CooldownMeter>)>,
 ) {
     // we only expect 1 selected weapon

@@ -7,8 +7,8 @@ use crate::{effect::Velocity, logic::Num};
 
 use super::{
     collision::Collidable,
-    weapon::{PlayerAttack, Weapon},
-    Target,
+    weapon::{PlayerAttack, PlayerWeapon},
+    OnLive, Target,
 };
 
 #[derive(Debug, Clone, Resource)]
@@ -53,13 +53,14 @@ pub fn spawn_projectile(
     cmd: &mut Commands,
     player_position: Vec3,
     direction: Vec3,
-    weapon: &Weapon,
+    weapon: &PlayerWeapon,
     assets: &ProjectileAssets,
 ) {
     // spawn a projectile
     let pos = player_position + Vec3::new(0.15, 0.25, 1.);
 
     cmd.spawn((
+        OnLive,
         Projectile { num: weapon.num },
         PbrBundle {
             visibility: Visibility::Visible,

@@ -2,10 +2,11 @@
 use bevy::{prelude::*, time::Stopwatch, ui::FocusPolicy};
 use bevy_mod_picking::{
     events::{Click, Pointer},
-    prelude::{Listener, On, PointerButton},
+    prelude::*,
 };
 
 pub mod collision;
+mod icon;
 mod interlude;
 mod mob;
 pub mod obstacle;
@@ -15,25 +16,25 @@ mod projectile;
 mod scene;
 mod weapon;
 
-use bevy_ui_anchor::{AnchorTarget, AnchorUiNode, HorizontalAnchor, VerticalAnchor};
 use interlude::AdvanceInterlude;
 use player::{
     process_attacks, process_damage_player, process_player_movement, update_player_cooldown_meter,
     update_player_health_meter, DamagePlayer, Player, PlayerMovement, TargetDestroyed,
 };
 use projectile::ProjectileAssets;
-use weapon::{install_weapon, PlayerAttack, WeaponCubeAssets};
+use weapon::{ChangeWeapon, PlayerAttack, WeaponCubeAssets};
 // re-export some stuff
 pub use weapon::TriggerWeapon;
 
 use crate::{
+    despawn_all_at,
     effect::{
         self, apply_collapse, apply_rotation, apply_velocity, stay_on_floor, time_to_live,
         Collapsing,
     },
     logic::{Num, TargetRule},
     structure::Fork,
-    ui::{spawn_button, MeterBundle},
+    ui::{button_system, spawn_button_in_group, spawn_button_with_style, MeterBundle},
     AppState,
 };
 
@@ -43,9 +44,12 @@ use super::CameraMarker;
 #[derive(SubStates, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[source(AppState = AppState::Live)]
 enum LiveState {
+    /// Running
     #[default]
     Running,
+    /// On pause screen
     Paused,
+    /// Showing an interlude message
     ShowingInterlude,
 }
 
@@ -60,7 +64,12 @@ impl Plugin for LiveActionPlugin {
             // live game setup
             .add_systems(
                 OnEnter(AppState::Live),
-                (scene::setup_scene, setup_ui, install_first_weapon),
+                (scene::setup_scene, setup_ui, start_running).chain(),
+            )
+            // live game take-down
+            .add_systems(
+                OnExit(AppState::Live),
+                (despawn_all_at::<OnLive>, reset_game),
             )
             // systems which should function regardless of the game state
             .add_systems(Update, pause_on_esc.run_if(in_state(AppState::Live)))
@@ -73,11 +82,18 @@ impl Plugin for LiveActionPlugin {
                     effect::apply_wobble,
                     effect::fade_away,
                     effect::apply_rotation,
+                    icon::update_icon_opacity,
                     mob::destroy_spawner_when_done,
                     weapon::update_cooldown,
                     weapon::trigger_weapon,
                     weapon::process_new_weapon,
                     weapon::process_approach_weapon_cube,
+                    weapon::weapon_keyboard_input,
+                    weapon::weapon_button_action,
+                    weapon::process_weapon_change,
+                    weapon::process_weapon_button_selected,
+                    weapon::process_weapon_button_deselected,
+                    button_system::<weapon::WeaponButton>,
                     (
                         process_player_movement,
                         apply_velocity,
@@ -89,7 +105,8 @@ impl Plugin for LiveActionPlugin {
                     (
                         process_attacks,
                         process_target_destroyed,
-                        clear_collapsed_target_icons,
+                        process_new_target,
+                        icon::clear_icons_of_destroyed_things,
                         process_damage_player,
                         apply_collapse,
                         time_to_live,
@@ -97,10 +114,17 @@ impl Plugin for LiveActionPlugin {
                         process_live_time,
                         mob::process_spawner_trigger,
                         interlude::process_interlude_trigger,
+                        button_system::<Decision>,
+                        decision_action,
                     )
                         .chain(),
                 )
                     .run_if(in_state(LiveState::Running)),
+            )
+            .add_systems(
+                Update,
+                (button_system::<PauseButton>, paused_button_action)
+                    .run_if(in_state(LiveState::Paused)),
             )
             .add_systems(
                 Update,
@@ -116,15 +140,30 @@ impl Plugin for LiveActionPlugin {
             .init_resource::<LiveTime>()
             .init_resource::<ProjectileAssets>()
             .init_resource::<WeaponCubeAssets>()
+            .init_resource::<mob::MobAssets>()
             .insert_resource(AmbientLight::NONE)
             // events
             .add_event::<TriggerWeapon>()
+            .add_event::<ChangeWeapon>()
             .add_event::<PlayerAttack>()
             .add_event::<TargetDestroyed>()
             .add_event::<DamagePlayer>()
             .add_event::<AdvanceInterlude>();
     }
 }
+
+fn start_running(mut next_state: ResMut<NextState<LiveState>>) {
+    next_state.set(LiveState::Running);
+}
+
+fn reset_game(mut next_state: ResMut<NextState<LiveState>>, mut live_time: ResMut<LiveTime>) {
+    next_state.set(LiveState::default());
+    live_time.reset();
+}
+
+/// Marker component for everything in live mode
+#[derive(Debug, Default, Component)]
+pub struct OnLive;
 
 /// Resource that keeps track of the live (in-game) time.
 ///
@@ -133,6 +172,10 @@ impl Plugin for LiveActionPlugin {
 pub struct LiveTime(pub Stopwatch);
 
 impl LiveTime {
+    pub fn reset(&mut self) {
+        self.0.reset();
+    }
+
     pub fn elapsed_seconds(&self) -> f32 {
         self.0.elapsed_secs() as f32
     }
@@ -210,79 +253,6 @@ pub struct Target {
     pub rule: TargetRule,
 }
 
-/// Marker component for the UI node showing a number
-#[derive(Debug, Component)]
-pub struct IconNode;
-
-/// system to despawn target icon nodes when
-/// the target that they are representing is destroyed
-pub fn clear_collapsed_target_icons(
-    mut cmd: Commands,
-    collapsed_targets_q: Query<Entity, With<Collapsing>>,
-    target_icon_q: Query<(Entity, &AnchorUiNode), With<IconNode>>,
-) {
-    for entity in collapsed_targets_q.iter() {
-        for (icon_entity, anchor) in target_icon_q.iter() {
-            let anchor_target = &anchor.target;
-            if matches!(anchor_target, AnchorTarget::Entity(e) if entity == *e) {
-                cmd.entity(icon_entity).despawn_recursive();
-            }
-        }
-    }
-}
-
-/// Spawn a node that shows the target number on top of the target
-pub fn spawn_icon(cmd: &mut Commands, entity: Entity, num: Num, color: Color) -> Entity {
-    // draw a circle
-    cmd.spawn((
-        IconNode,
-        NodeBundle {
-            style: Style {
-                align_self: AlignSelf::Center,
-                margin: UiRect::all(Val::Auto),
-                width: Val::Px(42.),
-                height: Val::Px(42.),
-                ..default()
-            },
-            background_color: BackgroundColor(Color::BLACK),
-            border_radius: BorderRadius::all(Val::Percent(50.)),
-            focus_policy: FocusPolicy::Pass,
-            ..default()
-        },
-        AnchorUiNode {
-            anchorwidth: HorizontalAnchor::Mid,
-            anchorheight: VerticalAnchor::Mid,
-            target: AnchorTarget::Entity(entity),
-        },
-        On::<Pointer<Click>>::run(callback_on_click),
-    ))
-    .with_children(|cmd| {
-        // and draw the number in the circle
-        cmd.spawn(TextBundle {
-            style: Style {
-                align_self: AlignSelf::Center,
-                margin: UiRect::all(Val::Auto),
-                ..default()
-            },
-            text: Text::from_section(
-                num.to_string(),
-                TextStyle {
-                    color,
-                    font_size: 36.,
-                    ..default()
-                },
-            ),
-            ..default()
-        });
-    })
-    .id()
-}
-
-/// Spawn a node that shows the target number on top of the target
-pub fn spawn_target_icon(cmd: &mut Commands, entity: Entity, num: Num) -> Entity {
-    spawn_icon(cmd, entity, num, Color::WHITE)
-}
-
 /// Component for the player's attack cooldown meter
 #[derive(Debug, Default, Component)]
 pub struct CooldownMeter;
@@ -291,21 +261,17 @@ pub struct CooldownMeter;
 #[derive(Debug, Default, Component)]
 pub struct HealthMeter;
 
-fn install_first_weapon(mut cmd: Commands) {
-    install_weapon(&mut cmd, 3.into());
-}
-
 /// Marker component for a UI node containing the weapon selectors
 #[derive(Debug, Default, Component)]
 pub struct WeaponListNode;
 
-/// Marker component for a weapon button
-#[derive(Debug, Default, Component)]
-pub struct WeaponButton;
-
 /// Marker component for the UI node that shows the game is paused
 #[derive(Debug, Default, Component)]
 struct PausedDiv;
+
+/// Group marker component for the buttons in the paused game screen
+#[derive(Debug, Default, Component)]
+struct PauseButton;
 
 #[derive(Debug, Component)]
 enum PausedButtonAction {
@@ -316,20 +282,23 @@ enum PausedButtonAction {
 /// Set up the main UI components in the game for the first time
 fn setup_ui(mut cmd: Commands) {
     // Node for the bottom HUD
-    cmd.spawn(NodeBundle {
-        focus_policy: FocusPolicy::Pass,
-        style: Style {
-            display: Display::Flex,
-            bottom: Val::Px(0.),
-            align_self: AlignSelf::FlexEnd,
-            width: Val::Percent(100.),
-            height: Val::Auto,
-            flex_direction: FlexDirection::Column,
-            align_content: AlignContent::FlexEnd,
+    cmd.spawn((
+        OnLive,
+        NodeBundle {
+            focus_policy: FocusPolicy::Pass,
+            style: Style {
+                display: Display::Flex,
+                bottom: Val::Px(0.),
+                align_self: AlignSelf::FlexEnd,
+                width: Val::Percent(100.),
+                height: Val::Auto,
+                flex_direction: FlexDirection::Column,
+                align_content: AlignContent::FlexEnd,
+                ..default()
+            },
             ..default()
         },
-        ..default()
-    })
+    ))
     .with_children(|root| {
         root.spawn((
             WeaponListNode,
@@ -363,6 +332,7 @@ fn setup_ui(mut cmd: Commands) {
     // node for the pausing screen, which is hidden by default
     cmd.spawn((
         PausedDiv,
+        OnLive,
         NodeBundle {
             style: Style {
                 display: Display::None,
@@ -373,77 +343,47 @@ fn setup_ui(mut cmd: Commands) {
                 height: Val::Percent(100.),
                 ..default()
             },
+            z_index: ZIndex::Global(10),
             background_color: BackgroundColor(Color::srgba(0., 0., 0., 0.5)),
             ..default()
         },
     ))
     .with_children(|cmd| {
         // button to resume the game
-        spawn_button(cmd, "Resume", PausedButtonAction::Resume);
+        spawn_button_in_group(cmd, "Resume", PauseButton, PausedButtonAction::Resume);
 
         // button to return to main menu
-        spawn_button(cmd, "Give Up", PausedButtonAction::GiveUp);
+        spawn_button_in_group(cmd, "Give Up", PauseButton, PausedButtonAction::GiveUp);
     });
 }
 
-/// create a new button
-pub fn spawn_weapon_button(cmd: &mut ChildBuilder<'_>, attack_num: Num, shortcut: char) {
-    // insert button
-    cmd.spawn((
-        WeaponButton,
-        ButtonBundle {
-            background_color: BackgroundColor(Color::BLACK),
-            border_color: BorderColor(Color::WHITE),
-            border_radius: BorderRadius::all(Val::Px(1.)),
-            style: Style {
-                border: UiRect::all(Val::Px(1.)),
-                display: Display::Flex,
-                align_self: AlignSelf::Center,
-                column_gap: Val::Px(10.),
-                width: Val::Px(64.),
-                height: Val::Px(64.),
-                margin: UiRect::all(Val::Px(10.)),
-                ..default()
-            },
-            ..default()
-        },
-    ))
-    .with_children(|parent| {
-        // shortcut
-        parent.spawn(TextBundle {
-            style: Style {
-                position_type: PositionType::Absolute,
-                left: Val::Px(1.),
-                top: Val::Px(1.),
-                ..default()
-            },
-            text: Text::from_section(
-                shortcut.to_string(),
-                TextStyle {
-                    font_size: 14.,
-                    ..default()
-                },
-            ),
-            ..Default::default()
-        });
-
-        // the actual number of the attack
-        parent.spawn(TextBundle {
-            style: Style {
-                align_self: AlignSelf::Center,
-                margin: UiRect::all(Val::Auto),
-                ..default()
-            },
-            text: Text::from_section(
-                attack_num.to_string(),
-                TextStyle {
-                    font_size: 36.,
-                    ..default()
-                },
-            ),
-            ..default()
-        });
-    });
+fn paused_button_action(
+    mut interaction_query: Query<
+        (&Interaction, &PausedButtonAction),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut paused_node_q: Query<&mut Style, With<PausedDiv>>,
+    mut live_state: ResMut<NextState<LiveState>>,
+    mut game_state: ResMut<NextState<AppState>>,
+) {
+    for (interaction, pause_button_action) in &mut interaction_query {
+        if *interaction == Interaction::Pressed {
+            match pause_button_action {
+                PausedButtonAction::Resume => {
+                    for mut style in paused_node_q.iter_mut() {
+                        style.display = Display::None;
+                    }
+                    live_state.set(LiveState::Running);
+                    println!("Game resumed");
+                }
+                PausedButtonAction::GiveUp => {
+                    // return to main menu
+                    game_state.set(AppState::Menu);
+                    println!("Giving up...");
+                }
+            }
+        }
+    }
 }
 
 /// general system callback for when the player clicks on something
@@ -479,6 +419,19 @@ pub fn process_target_destroyed(
             done = true;
         }
     }
+}
+
+/// system to stop the player if new targets emerge
+pub fn process_new_target(
+    target_q: Query<(Entity, &Target), Added<Target>>,
+    mut player_q: Query<&mut PlayerMovement, With<Player>>,
+) {
+    if target_q.iter().count() == 0 {
+        return;
+    }
+
+    let mut player_movement = player_q.single_mut();
+    *player_movement = PlayerMovement::Halting;
 }
 
 /// system detecting that the player has reached the end of the corridor
@@ -525,6 +478,7 @@ enum Decision {
 
 fn spawn_decision_arrows(cmd: &mut Commands) {
     cmd.spawn((
+        OnLive,
         DecisionArrowsDiv,
         NodeBundle {
             style: Style {
@@ -548,7 +502,53 @@ fn spawn_decision_arrows(cmd: &mut Commands) {
         },
     ))
     .with_children(|cmd| {
-        spawn_button(cmd, "<", Decision::Left);
-        spawn_button(cmd, ">", Decision::Right);
+        spawn_button_with_style(
+            cmd,
+            "<",
+            Style {
+                width: Val::Px(200.),
+                border: UiRect::all(Val::Px(2.0)),
+                padding: UiRect {
+                    top: Val::Px(10.),
+                    bottom: Val::Px(10.),
+                    left: Val::Px(20.),
+                    right: Val::Px(20.),
+                },
+                margin: UiRect::all(Val::Px(20.)),
+                ..default()
+            },
+            Decision::Left,
+        );
+        spawn_button_with_style(
+            cmd,
+            ">",
+            Style {
+                width: Val::Px(200.),
+                border: UiRect::all(Val::Px(2.0)),
+                padding: UiRect {
+                    top: Val::Px(10.),
+                    bottom: Val::Px(10.),
+                    left: Val::Px(20.),
+                    right: Val::Px(20.),
+                },
+                margin: UiRect::all(Val::Px(20.)),
+                ..default()
+            },
+            Decision::Right,
+        );
     });
+}
+
+/// system that handles the choice of the player
+fn decision_action(
+    mut interaction_query: Query<(&Interaction, &Decision), (Changed<Interaction>, With<Button>)>,
+    mut live_state: ResMut<NextState<LiveState>>,
+    mut game_state: ResMut<NextState<AppState>>,
+) {
+    for (interaction, decision) in &mut interaction_query {
+        if *interaction == Interaction::Pressed {
+            // TODO
+            println!("TODO apply {decision:?}");
+        }
+    }
 }

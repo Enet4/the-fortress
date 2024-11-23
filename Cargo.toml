@@ -48,10 +48,15 @@ features = [
 [dependencies.bevy_mod_picking]
 version = "0.20.1"
 default-features = false
-features = ["backend_raycast", "debug"]
+features = ["backend_raycast", "backend_bevy_ui"]
 
 [features]
 default = []
+dev_mode = [
+    "bevy/bevy_dev_tools",
+    "bevy/dynamic_linking",
+    "bevy_mod_picking/debug",
+]
 webgl2 = ["bevy/webgl2"]
 
 [profile.dev]

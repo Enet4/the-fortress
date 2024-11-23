@@ -50,23 +50,47 @@ const HOVERED_BUTTON: Color = Color::srgb(0., 1., 1.);
 const HOVERED_PRESSED_BUTTON: Color = Color::srgb(0., 0.65, 0.25);
 const PRESSED_BUTTON: Color = Color::srgb(0.5, 0.5, 0.5);
 
-pub fn spawn_button_with_style<'a, A: Component>(
+fn spawn_button_impl<'a, A, G>(
     cmd: &'a mut ChildBuilder<'_>,
     text: impl Into<String>,
-    style: Style,
+    style: Option<Style>,
+    group: Option<G>,
     action: A,
-) -> EntityCommands<'a> {
-    let mut cmds = cmd.spawn((
+) -> EntityCommands<'a>
+where
+    A: Component,
+    G: Component,
+{
+    let style = style.unwrap_or_else(|| Style {
+        width: Val::Auto,
+        min_width: Val::Px(240.),
+        border: UiRect::all(Val::Px(2.0)),
+        padding: UiRect {
+            top: Val::Px(10.),
+            bottom: Val::Px(10.),
+            left: Val::Px(20.),
+            right: Val::Px(20.),
+        },
+        margin: UiRect::all(Val::Px(20.)),
+        ..default()
+    });
+
+    let bundle = (
         action,
         ButtonBundle {
             style,
             background_color: BackgroundColor(Color::BLACK),
             border_color: BorderColor(NORMAL_BUTTON),
             border_radius: BorderRadius::all(Val::Px(0.)),
-
             ..default()
         },
-    ));
+    );
+    let mut cmds = if let Some(group) = group {
+        cmd.spawn((bundle, group))
+    } else {
+        cmd.spawn(bundle)
+    };
+
     cmds.with_children(|cmd| {
         cmd.spawn(TextBundle {
             text: Text::from_section(
@@ -93,41 +117,72 @@ pub fn spawn_button_with_style<'a, A: Component>(
     cmds
 }
 
-pub fn spawn_button<'a, A: Component>(
+pub fn spawn_button_with_style<'a, A>(
+    cmd: &'a mut ChildBuilder<'_>,
+    text: impl Into<String>,
+    style: Style,
+    action: A,
+) -> EntityCommands<'a>
+where
+    A: Component,
+{
+    spawn_button_impl(cmd, text, Some(style), None::<Button>, action)
+}
+
+pub fn spawn_button_in_group_with_style<'a, A, G>(
+    cmd: &'a mut ChildBuilder<'_>,
+    text: impl Into<String>,
+    style: Style,
+    group: G,
+    action: A,
+) -> EntityCommands<'a>
+where
+    A: Component,
+    G: Component,
+{
+    spawn_button_impl(cmd, text, Some(style), Some(group), action)
+}
+
+pub fn spawn_button_in_group<'a, A, G>(
+    cmd: &'a mut ChildBuilder<'_>,
+    text: impl Into<String>,
+    group: G,
+    action: A,
+) -> EntityCommands<'a>
+where
+    A: Component,
+    G: Component,
+{
+    spawn_button_impl(cmd, text, None, Some(group), action)
+}
+
+/// Spawn a button, no group, default styles
+#[inline]
+pub fn spawn_button<'a, A>(
     cmd: &'a mut ChildBuilder<'_>,
     text: impl Into<String>,
     action: A,
-) -> EntityCommands<'a> {
-    spawn_button_with_style(
-        cmd,
-        text,
-        Style {
-            width: Val::Auto,
-            min_width: Val::Px(240.),
-            border: UiRect::all(Val::Px(2.0)),
-            padding: UiRect {
-                top: Val::Px(10.),
-                bottom: Val::Px(10.),
-                left: Val::Px(20.),
-                right: Val::Px(20.),
-            },
-            margin: UiRect::all(Val::Px(20.)),
-            ..default()
-        },
-        action,
-    )
+) -> EntityCommands<'a>
+where
+    A: Component,
+{
+    spawn_button_impl(cmd, text, None, None::<Button>, action)
 }
 
 #[derive(Debug, Component)]
 pub struct SelectedOption;
 
-/// generic button system
-pub fn button_system(
+/// generic button system for updating a button style
+/// (use `T` for a specific button marker group,
+/// use `Button` if this isn't important)
+pub fn button_system<T>(
     mut interaction_query: Query<
         (&Interaction, &mut BorderColor, Option<&SelectedOption>),
-        (Changed<Interaction>, With<Button>),
+        (Changed<Interaction>, With<T>),
     >,
-) {
+) where
+    T: Component,
+{
     for (interaction, mut border_color, selected) in &mut interaction_query {
         border_color.0 = match (*interaction, selected) {
             (Interaction::Pressed, _) | (Interaction::None, Some(_)) => PRESSED_BUTTON,

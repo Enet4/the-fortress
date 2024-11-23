@@ -3,7 +3,7 @@ use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Expo
 use crate::{
     assets::TextureHandles,
     effect::{Glimmers, Wobbles},
-    live::obstacle::SimpleTargetBundle,
+    live::{obstacle::SimpleTargetBundle, OnLive},
     postprocess::PostProcessSettings,
     CameraMarker,
 };
@@ -14,7 +14,6 @@ use super::{
     interlude::InterludeSpec,
     phase::PhaseTrigger,
     player::spawn_player,
-    spawn_target_icon,
     weapon::{spawn_weapon_cube, WeaponCubeAssets},
 };
 
@@ -26,11 +25,12 @@ pub fn setup_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
     weapon_cube_assets: Res<WeaponCubeAssets>,
 ) {
+    let corridor_length = 80.;
+
     let wall_texture_handle = texture_handles.wall.clone();
     let floor_texture_handle = texture_handles.floor.clone();
     let ceil_texture_handle = texture_handles.ceil.clone();
 
-    let corridor_length = 72.;
     let corridor_dim = Vec3::from_array([12., 8., corridor_length]);
 
     let floor_material_handle = materials.add(StandardMaterial {
@@ -135,14 +135,16 @@ pub fn setup_scene(
                     },
                     transform: Transform::from_translation(Vec3::new(0., 0.5, 0.5))
                         .looking_to(Dir3::Z, Dir3::Y),
-                    exposure: Exposure::default(),
+                    // slightly lower exposure from default,
+                    // which results in a bit more brightness and less color saturation
+                    exposure: Exposure { ev100: 9.1 },
                     ..default()
                 },
                 InheritedVisibility::HIDDEN,
                 FogSettings {
                     color: Color::BLACK,
                     falloff: FogFalloff::Linear {
-                        start: 64.,
+                        start: 66.,
                         end: 72.,
                     },
                     ..default()
@@ -179,6 +181,16 @@ pub fn setup_scene(
 
     // add phase triggers
 
+    // add the first weapon cube
+
+    spawn_weapon_cube(
+        &mut cmd,
+        &weapon_cube_assets,
+        &mut materials,
+        Vec3::new(0., 1.75, 0.),
+        2.into(),
+    );
+
     // test: add a target cube
     let test_cube_dim = Vec3::from_array([2., 4., 2.]);
     let test_cube_entity = cmd
@@ -193,21 +205,21 @@ pub fn setup_scene(
         ))
         .id();
 
-    spawn_target_icon(&mut cmd, test_cube_entity, 1.into());
+    super::icon::spawn_target_icon(&mut cmd, test_cube_entity, 1.into());
 
-    // test: add a weapon cube
+    // test: add another weapon cube
 
     spawn_weapon_cube(
         &mut cmd,
         &weapon_cube_assets,
-        materials,
-        Vec3::new(0., 3., 22.),
-        2.into(),
+        &mut materials,
+        Vec3::new(0., 1.75, 22.),
+        3.into(),
     );
 
     // test: add an interlude just before the fork
-
     cmd.spawn((
+        OnLive,
         PhaseTrigger::new_by_corridor(corridor_length, 0.85),
         InterludeSpec::from_sequence([
             (

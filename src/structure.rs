@@ -7,7 +7,7 @@ use bevy_mod_picking::{
     PickableBundle,
 };
 
-use crate::live::{callback_on_click, collision::Collidable};
+use crate::live::{callback_on_click, collision::Collidable, OnLive};
 
 fn new_wall(
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -54,6 +54,7 @@ pub fn spawn_corridor<'a>(
 ) -> EntityCommands<'a> {
     let corridor_half_dim = dim / 2.;
     let mut corridor = cmd.spawn((
+        OnLive,
         Corridor { dim },
         TransformBundle {
             local: Transform::from_translation(pos),
@@ -147,6 +148,7 @@ pub fn spawn_fork<'a>(
 ) -> EntityCommands<'a> {
     let half_dim = dim / 2.;
     let mut fork = cmd.spawn((
+        OnLive,
         Fork,
         TransformBundle {
             local: Transform::from_translation(pos),

@@ -5,11 +5,13 @@ use bevy::{
     window::{WindowMode, WindowResolution},
 };
 use bevy_mod_picking::DefaultPickingPlugins;
+use cheat::{Cheats, TextBuffer};
 use live::LiveActionPlugin;
 use menu::MenuPlugin;
 use postprocess::PostProcessPlugin;
 
 mod assets;
+mod cheat;
 mod effect;
 mod live;
 mod logic;
@@ -87,16 +89,26 @@ fn main() {
             Update,
             (
                 effect::apply_collapse,
+                effect::scale_up,
                 postprocess::oscillate_dithering,
                 postprocess::fadeout_dithering,
+                cheat::cheat_input,
             ),
         )
         .add_systems(PostUpdate, (effect::apply_glimmer,))
         // add resources which are used globally
         .init_resource::<GameSettings>()
+        .init_resource::<Cheats>()
+        .init_resource::<TextBuffer>()
         // add resources which we want to be able to load early
         .init_resource::<TextureHandles>()
         // add main state
         .init_state::<AppState>()
         .run();
+}
+
+pub fn despawn_all_at<T: Component>(mut cmd: Commands, query: Query<Entity, With<T>>) {
+    for entity in query.iter() {
+        cmd.entity(entity).despawn_recursive();
+    }
 }

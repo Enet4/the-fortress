@@ -2,6 +2,9 @@ use bevy::prelude::*;
 use bevy_mod_picking::events::{Click, Pointer};
 use bevy_mod_picking::prelude::*;
 
+use crate::effect::ScalesUp;
+
+use super::OnLive;
 use super::{callback_on_click, collision::Collidable, Target};
 
 #[derive(Bundle)]
@@ -12,6 +15,8 @@ pub struct SimpleTargetBundle {
     pub collidable: Collidable,
     pub target: Target,
     pub on_click: On<Pointer<Click>>,
+    pub scales_up: ScalesUp,
+    pub on_live: OnLive,
 }
 
 impl SimpleTargetBundle {
@@ -23,11 +28,13 @@ impl SimpleTargetBundle {
                     is_hoverable: false,
                     should_block_lower: true,
                 },
-                ..Default::default()
+                ..default()
             },
             collidable,
             target,
             on_click: On::<Pointer<Click>>::run(callback_on_click),
+            scales_up: default(),
+            on_live: default(),
         }
     }
 
@@ -37,25 +44,18 @@ impl SimpleTargetBundle {
         mesh: Handle<Mesh>,
         material: Handle<StandardMaterial>,
     ) -> Self {
-
         let pbr = PbrBundle {
-            transform: Transform::from_translation(position),
+            transform: Transform::from_translation(position).with_scale(Vec3::splat(1e-3)),
             mesh,
             material,
-            ..Default::default()
+            ..default()
         };
 
         let target = Target {
-            num: 1.into(),
-            ..Default::default()
+            num: 2.into(),
+            ..default()
         };
 
         Self::new(pbr, Collidable { dim }, target)
-    }
-}
-
-impl Default for SimpleTargetBundle {
-    fn default() -> Self {
-        Self::new(default(), default(), default())
     }
 }

@@ -103,10 +103,9 @@ pub fn spawn_interlude(cmd: &mut Commands, spec: InterludeSpec) -> Entity {
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::Center,
                 position_type: PositionType::Absolute,
-                width: Val::Percent(98.),
-                height: Val::Percent(98.),
-                border: UiRect::all(Val::Px(2.)),
-                margin: UiRect::all(Val::Px(20.)),
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
+                padding: UiRect::axes(Val::Px(72.), Val::Px(48.)),
                 ..default()
             },
             background_color: Color::BLACK.into(),
@@ -116,63 +115,78 @@ pub fn spawn_interlude(cmd: &mut Commands, spec: InterludeSpec) -> Entity {
         },
     ))
     .with_children(|cmd| {
-        // message node
+        // inner node for the border
         cmd.spawn((
             InterludePiece,
-            TextBundle {
+            NodeBundle {
                 style: Style {
-                    margin: UiRect {
-                        left: Val::Px(24.),
-                        right: Val::Px(24.),
-                        top: Val::Px(48.),
-                        bottom: Val::Px(24.),
-                        ..default()
+                    border: UiRect::all(Val::Px(2.)),
+                    padding: UiRect {
+                        top: Val::Px(40.),
+                        bottom: Val::Px(20.),
+                        left: Val::Px(20.),
+                        right: Val::Px(20.),
                     },
+                    width: Val::Percent(100.),
                     height: Val::Percent(100.),
                     ..default()
                 },
-                text: Text {
-                    justify: JustifyText::Center,
-                    linebreak_behavior: bevy::text::BreakLineOn::WordBoundary,
-                    sections: vec![TextSection {
-                        value: message.into(),
-                        style: TextStyle {
-                            font_size: 30.,
-                            // start invisible, will move up through a system
-                            color: Color::srgba(1., 1., 1., 0.),
-                            font: Default::default(),
-                        },
-                    }],
-                },
+                border_color: BorderColor(Color::WHITE),
                 ..default()
             },
-        ));
-        // if there is an image, add it
-        if let Some(image) = image {
+        ))
+        .with_children(|cmd| {
+            // message node
             cmd.spawn((
                 InterludePiece,
-                ImageBundle {
+                TextBundle {
                     style: Style {
-                        margin: UiRect {
-                            left: Val::Px(10.),
-                            right: Val::Px(10.),
-                            top: Val::Px(10.),
-                            bottom: Val::Px(10.),
-                            ..default()
-                        },
                         height: Val::Percent(100.),
                         ..default()
                     },
-                    image: UiImage {
-                        // start invisible, will move up through a system
-                        color: Color::srgba(1., 1., 1., 0.),
-                        texture: image,
-                        ..default()
+                    text: Text {
+                        justify: JustifyText::Center,
+                        linebreak_behavior: bevy::text::BreakLineOn::WordBoundary,
+                        sections: vec![TextSection {
+                            value: message.into(),
+                            style: TextStyle {
+                                font_size: 30.,
+                                // start invisible, will move up through a system
+                                color: Color::srgba(1., 1., 1., 0.),
+                                font: Default::default(),
+                            },
+                        }],
                     },
                     ..default()
                 },
             ));
-        }
+            // if there is an image, add it
+            if let Some(image) = image {
+                cmd.spawn((
+                    InterludePiece,
+                    ImageBundle {
+                        style: Style {
+                            margin: UiRect {
+                                left: Val::Px(10.),
+                                right: Val::Px(10.),
+                                top: Val::Px(10.),
+                                bottom: Val::Px(10.),
+                                ..default()
+                            },
+                            height: Val::Percent(100.),
+                            ..default()
+                        },
+                        image: UiImage {
+                            // start invisible, will move up through a system
+                            color: Color::srgba(1., 1., 1., 0.),
+                            texture: image,
+                            ..default()
+                        },
+                        ..default()
+                    },
+                ));
+            }
+        });
     })
     .id()
 }
@@ -205,7 +219,7 @@ pub fn process_interlude_trigger(
 #[derive(Debug, Event)]
 pub struct AdvanceInterlude(Entity, InterludeEffect);
 
-/// system that detects a click and advances the interlude
+/// system that detects a click and moves forward in the interlude
 pub fn on_click_advance_interlude(
     mut cmd: Commands,
     on_click: Res<ButtonInput<MouseButton>>,
@@ -251,7 +265,7 @@ pub fn fade_in_interlude(
         }
     }
     for (entity, mut image) in image_q.iter_mut() {
-        let new_alpha = (image.color.alpha() + delta * 1.25).min(1.);
+        let new_alpha = (image.color.alpha() + delta * 2.).min(1.);
         image.color.set_alpha(new_alpha);
         if new_alpha == 1. {
             cmd.entity(entity).remove::<FadeIn>();
@@ -298,9 +312,13 @@ pub fn process_advance_interlude(
         match effect {
             InterludeEffect::Next(next_spec) => {
                 // despawn the current interlude
-                cmd.entity(*entity).despawn_recursive();
-                // spawn the next interlude
-                spawn_interlude(&mut cmd, *next_spec.clone());
+                // (using `get_entity` because there is a race condition
+                // which might trigger this event more than once for the same step)
+                if let Some(e_cmd) = cmd.get_entity(*entity) {
+                    e_cmd.despawn_recursive();
+                    // spawn the next interlude
+                    spawn_interlude(&mut cmd, *next_spec.clone());
+                }
             }
             InterludeEffect::Resume => {
                 // despawn the current interlude
@@ -315,5 +333,6 @@ pub fn process_advance_interlude(
                 next_root_state.set(AppState::Menu);
             }
         }
+        break;
     }
 }

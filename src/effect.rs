@@ -14,14 +14,14 @@ pub fn apply_velocity(time: Res<Time>, mut q: Query<(&mut Transform, &Velocity)>
     }
 }
 
-/// Component for things which rotate at a fixed speed
-#[derive(Debug, Default, Component)]
-pub struct Rotating(pub Quat);
+/// Component for things which rotate around the Y axis at a fixed speed
+#[derive(Debug, Component)]
+pub struct Rotating(pub f32);
 
 pub fn apply_rotation(time: Res<Time>, mut q: Query<(&mut Transform, &Rotating)>) {
     let delta = time.delta_seconds();
-    for (mut transform, Rotating(quat)) in q.iter_mut() {
-        transform.rotate(*quat * delta);
+    for (mut transform, Rotating(intensity)) in q.iter_mut() {
+        transform.rotate_y(*intensity * std::f32::consts::PI * delta);
     }
 }
 
@@ -140,5 +140,27 @@ pub fn fade_away(
         };
         let new_alpha = (material.base_color.alpha() - delta * 1.5).max(0.);
         material.base_color.set_alpha(new_alpha);
+    }
+}
+
+/// Marker component for entities which appear by scaling up
+#[derive(Debug, Default, Component)]
+pub struct ScalesUp;
+
+/// system that inflates something with `ScalesUp` until it reaches size 1
+pub fn scale_up(
+    mut cmd: Commands,
+    time: Res<Time>,
+    mut q: Query<(Entity, &mut Transform, &ScalesUp)>,
+) {
+    const SPEED_FACTOR: f32 = 2.5;
+    let delta = time.delta_seconds();
+    for (entity, mut transform, _) in q.iter_mut() {
+        let scale = transform.scale;
+        let new_scale = (scale + Vec3::splat(delta * SPEED_FACTOR)).min(Vec3::splat(1.));
+        transform.scale = new_scale;
+        if new_scale == Vec3::splat(1.) {
+            cmd.entity(entity).remove::<ScalesUp>();
+        }
     }
 }
