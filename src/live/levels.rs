@@ -86,6 +86,10 @@ impl CurrentLevel {
         self.id.add_decision(decision);
         self.spec = LevelSpec::level(self.id);
     }
+
+    pub fn reset(&mut self) {
+        *self = CurrentLevel::default();
+    }
 }
 
 /// Generic thing in a level

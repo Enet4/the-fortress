@@ -219,9 +219,14 @@ fn start_running(mut next_state: ResMut<NextState<LiveState>>) {
     next_state.set(LiveState::Running);
 }
 
-fn reset_game(mut next_state: ResMut<NextState<LiveState>>, mut live_time: ResMut<LiveTime>) {
+fn reset_game(
+    mut next_state: ResMut<NextState<LiveState>>,
+    mut live_time: ResMut<LiveTime>,
+    mut current_level: ResMut<CurrentLevel>,
+) {
     next_state.set(LiveState::default());
     live_time.reset();
+    current_level.reset();
 }
 
 fn enter_defeat(mut defeat_div_q: Query<&mut Style, With<DefeatDiv>>) {
