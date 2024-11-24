@@ -149,7 +149,7 @@ impl LevelSpec {
         match level {
             // starting level
             LevelId { stage: 0, .. } => Self::level_0(),
-            level @ LevelId { stage: 1, .. } => Self::level_carp(),
+            LevelId { stage: 1, .. } => Self::level_carp(),
             level @ LevelId { stage: 2, .. } => todo!("Unspecified level {level}"),
             level @ LevelId { stage: 3, .. } => todo!("Unspecified level {level}"),
             level @ LevelId { stage: 4, .. } => todo!("Unspecified level {level}"),
@@ -162,29 +162,47 @@ impl LevelSpec {
 
     fn level_0() -> Self {
         LevelSpec {
-            corridor_length: 75.,
+            corridor_length: 140.,
             things: vec![
-                // add a weapon cube close to the beginning
+                // starting story
                 (
-                    0.2,
+                    0.,
+                    InterludeSpec::from_sequence([
+                        (include_str!("./interludes/1_1.txt"), Some("interlude-01.png")),
+                        (include_str!("./interludes/1_2.txt"), Some("interlude-02.png")),
+                    ])
+                ).into(),
+
+                // message from the wizard
+
+                (
+                    0.4,
+                    InterludeSpec::from_sequence([
+                        (include_str!("./interludes/2_1.txt"), None),
+                        (include_str!("./interludes/2_2.txt"), None),
+                    ])
+                ).into(),
+
+                // add a weapon cube
+                (
+                    0.45,
                     ThingKind::WeaponCube { x: 0., num: 2.into() }
                 ).into(),
 
-
                 // add a mob spawner that spawns a single mob
                 (
-                    0.45,
+                    0.6,
                     MobSpawner::new(1, 2., vec![2.into()]),
                 ).into(),
                 // an interlude just before the fork
                 (
-                    0.75,
+                    0.92,
                     InterludeSpec::from_sequence([
                         (
-                            "At the end of the corridor, you see two possible paths.\n\nThere appear to be no distinct visual cues between the two.",
+                            "At the end of the corridor, you see two possible paths. There appear to be no distinct visual cues between the two.",
                             None,
                         ),
-                        ("Reluctantly, you follow your instinct and choose.", None),
+                        ("Reluctantly, you tap into your precognitive skills, and choose.", None),
                     ]),
                 ).into()
             ],

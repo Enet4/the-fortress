@@ -11,15 +11,18 @@ use super::{phase::PhaseTrigger, player::Player, LiveState};
 /// also serving as a marker for the interlude top UI node.
 #[derive(Debug, Clone, Component)]
 pub struct InterludeSpec {
+    /// the text message in the interlude
     pub message: String,
-    pub image: Option<Handle<Image>>,
+    /// path to the image to present in this step
+    pub image: Option<&'static str>,
+    /// what should happen when the player dismisses this interlude
     pub effect: InterludeEffect,
 }
 
 impl InterludeSpec {
     pub fn from_sequence<I, T>(seq: I) -> Self
     where
-        I: IntoIterator<Item = (T, Option<Handle<Image>>)>,
+        I: IntoIterator<Item = (T, Option<&'static str>)>,
         T: Into<String>,
     {
         Self::from_sequence_impl(seq, false).expect("interlude sequence must not be empty")
@@ -27,7 +30,7 @@ impl InterludeSpec {
 
     pub fn from_sequence_and_exit<I, T>(seq: I) -> Self
     where
-        I: IntoIterator<Item = (T, Option<Handle<Image>>)>,
+        I: IntoIterator<Item = (T, Option<&'static str>)>,
         T: Into<String>,
     {
         Self::from_sequence_impl(seq, true).expect("interlude sequence must not be empty")
@@ -35,14 +38,14 @@ impl InterludeSpec {
 
     fn from_sequence_impl<I, T>(seq: I, exit: bool) -> Option<Self>
     where
-        I: IntoIterator<Item = (T, Option<Handle<Image>>)>,
+        I: IntoIterator<Item = (T, Option<&'static str>)>,
         T: Into<String>,
     {
         let mut seq = seq.into_iter();
         let (message, image) = seq.next()?;
 
         match (Self::from_sequence_impl(seq, exit), exit) {
-            (None, false) => Some(Self::new_text_single(message)),
+            (None, false) => Some(Self::new_single(message, image)),
             (None, true) => Some(Self {
                 message: message.into(),
                 image,
@@ -56,16 +59,12 @@ impl InterludeSpec {
         }
     }
 
-    pub fn new_text(message: impl Into<String>, effect: InterludeEffect) -> Self {
+    pub fn new_single(message: impl Into<String>, image: Option<&'static str>) -> Self {
         Self {
             message: message.into(),
-            image: None,
-            effect,
+            image,
+            effect: InterludeEffect::Resume,
         }
-    }
-
-    pub fn new_text_single(message: impl Into<String>) -> Self {
-        Self::new_text(message, InterludeEffect::Resume)
     }
 
     /// whether reaching this interlude also means the end of the game
@@ -100,9 +99,15 @@ pub struct FadeIn;
 #[derive(Debug, Component)]
 pub struct FadeOut;
 
-pub fn spawn_interlude(cmd: &mut Commands, spec: InterludeSpec) -> Entity {
+pub fn spawn_interlude(
+    cmd: &mut Commands,
+    spec: InterludeSpec,
+    asset_server: &AssetServer,
+) -> Entity {
     let message = spec.message.clone();
-    let image = spec.image.clone();
+
+    let image = spec.image.map(|path| asset_server.load(path));
+
     cmd.spawn((
         spec,
         NodeBundle {
@@ -129,6 +134,8 @@ pub fn spawn_interlude(cmd: &mut Commands, spec: InterludeSpec) -> Entity {
             InterludePiece,
             NodeBundle {
                 style: Style {
+                    display: Display::Flex,
+                    flex_direction: FlexDirection::Row,
                     border: UiRect::all(Val::Px(2.)),
                     padding: UiRect {
                         top: Val::Px(40.),
@@ -145,9 +152,39 @@ pub fn spawn_interlude(cmd: &mut Commands, spec: InterludeSpec) -> Entity {
             },
         ))
         .with_children(|cmd| {
+            // if there is an image, add it
+            if let Some(image) = image {
+                cmd.spawn((
+                    InterludePiece,
+                    FadeIn,
+                    ImageBundle {
+                        style: Style {
+                            margin: UiRect {
+                                left: Val::Px(10.),
+                                right: Val::Px(10.),
+                                top: Val::Px(10.),
+                                bottom: Val::Px(10.),
+                                ..default()
+                            },
+                            height: Val::Auto,
+                            width: Val::Percent(40.),
+                            ..default()
+                        },
+                        image: UiImage {
+                            // start invisible, will move up through a system
+                            color: Color::srgba(1., 1., 1., 0.125),
+                            texture: image,
+                            ..default()
+                        },
+                        ..default()
+                    },
+                ));
+            }
+
             // message node
             cmd.spawn((
                 InterludePiece,
+                FadeIn,
                 TextBundle {
                     style: Style {
                         margin: UiRect::all(Val::Auto),
@@ -159,9 +196,9 @@ pub fn spawn_interlude(cmd: &mut Commands, spec: InterludeSpec) -> Entity {
                         sections: vec![TextSection {
                             value: message.into(),
                             style: TextStyle {
-                                font_size: 30.,
+                                font_size: 28.,
                                 // start invisible, will move up through a system
-                                color: Color::srgba(1., 1., 1., 0.),
+                                color: Color::srgba(1., 1., 1., 0.125),
                                 font: Default::default(),
                             },
                         }],
@@ -169,32 +206,6 @@ pub fn spawn_interlude(cmd: &mut Commands, spec: InterludeSpec) -> Entity {
                     ..default()
                 },
             ));
-            // if there is an image, add it
-            if let Some(image) = image {
-                cmd.spawn((
-                    InterludePiece,
-                    ImageBundle {
-                        style: Style {
-                            margin: UiRect {
-                                left: Val::Px(10.),
-                                right: Val::Px(10.),
-                                top: Val::Px(10.),
-                                bottom: Val::Px(10.),
-                                ..default()
-                            },
-                            height: Val::Percent(100.),
-                            ..default()
-                        },
-                        image: UiImage {
-                            // start invisible, will move up through a system
-                            color: Color::srgba(1., 1., 1., 0.),
-                            texture: image,
-                            ..default()
-                        },
-                        ..default()
-                    },
-                ));
-            }
         });
     })
     .id()
@@ -206,6 +217,7 @@ pub fn process_interlude_trigger(
     trigger_q: Query<(Entity, &InterludeSpec, &PhaseTrigger)>,
     player_q: Query<&Transform, With<Player>>,
     mut next_state: ResMut<NextState<LiveState>>,
+    asset_server: Res<AssetServer>,
 ) {
     let Ok(player_transform) = player_q.get_single() else {
         return;
@@ -219,7 +231,7 @@ pub fn process_interlude_trigger(
             }
 
             // spawn the interlude
-            spawn_interlude(&mut cmd, spec.clone());
+            spawn_interlude(&mut cmd, spec.clone(), &asset_server);
             // despawn the trigger
             cmd.entity(entity).despawn();
             // issue state transition
@@ -238,7 +250,9 @@ pub struct AdvanceInterlude(Entity, InterludeEffect);
 pub fn on_click_advance_interlude(
     mut cmd: Commands,
     on_click: Res<ButtonInput<MouseButton>>,
-    interlude_q: Query<(Entity, &InterludeSpec)>,
+    // should only fetch the interlude being presented,
+    // hence `Without<PhaseTrigger>`
+    interlude_q: Query<(Entity, &InterludeSpec), Without<PhaseTrigger>>,
     interlude_pieces_q: Query<(Entity, Has<FadeOut>), With<InterludePiece>>,
     mut advance_event: EventWriter<AdvanceInterlude>,
 ) {
@@ -266,7 +280,7 @@ pub fn on_click_advance_interlude(
 pub fn fade_in_interlude(
     time: Res<Time>,
     mut cmd: Commands,
-    mut text_q: Query<(Entity, &mut Text), Without<FadeIn>>,
+    mut text_q: Query<(Entity, &mut Text), With<FadeIn>>,
     mut image_q: Query<(Entity, &mut UiImage), With<FadeIn>>,
 ) {
     let delta = time.delta_seconds();
@@ -291,13 +305,16 @@ pub fn fade_in_interlude(
 /// system to slowly fade out interlude content before transitioning
 pub fn fade_out_interlude(
     time: Res<Time>,
-    interlude_q: Query<(Entity, &InterludeSpec)>,
+    // should only fetch the interlude being presented,
+    // hence `Without<PhaseTrigger>`
+    interlude_q: Query<(Entity, &InterludeSpec), Without<PhaseTrigger>>,
     mut text_q: Query<&mut Text, With<FadeOut>>,
     mut image_q: Query<&mut UiImage, With<FadeOut>>,
     mut advance_event: EventWriter<AdvanceInterlude>,
 ) {
     let delta = time.delta_seconds();
 
+    let mut should_transition = false;
     if let Ok(mut text) = text_q.get_single_mut() {
         for section in text.sections.iter_mut() {
             let new_alpha = (section.style.color.alpha() - delta * 2.).max(0.);
@@ -305,14 +322,18 @@ pub fn fade_out_interlude(
 
             if new_alpha == 0. {
                 // time to transition
-                let (e, spec) = interlude_q.single();
-                advance_event.send(AdvanceInterlude(e, spec.effect.clone()));
+                should_transition = true;
             }
         }
     }
     if let Ok(mut image) = image_q.get_single_mut() {
         let new_alpha = (image.color.alpha() - delta * 2.).max(0.);
         image.color.set_alpha(new_alpha);
+    }
+
+    if should_transition {
+        let (e, spec) = interlude_q.single();
+        advance_event.send(AdvanceInterlude(e, spec.effect.clone()));
     }
 }
 
@@ -321,6 +342,7 @@ pub fn process_advance_interlude(
     mut cmd: Commands,
     mut next_live_state: ResMut<NextState<LiveState>>,
     mut next_root_state: ResMut<NextState<AppState>>,
+    asset_server: Res<AssetServer>,
 ) {
     for event in events.read() {
         let AdvanceInterlude(entity, effect) = event;
@@ -333,7 +355,7 @@ pub fn process_advance_interlude(
             match effect {
                 InterludeEffect::Next(next_spec) => {
                     // spawn the next interlude
-                    spawn_interlude(&mut cmd, *next_spec.clone());
+                    spawn_interlude(&mut cmd, *next_spec.clone(), &asset_server);
                 }
                 InterludeEffect::Resume => {
                     // issue a state transition back to live
