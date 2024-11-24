@@ -201,7 +201,7 @@ pub fn spawn_interlude(
                             value: message.into(),
                             style: TextStyle {
                                 font: font.clone(),
-                                font_size: 30.,
+                                font_size: 32.,
                                 // start invisible, will move up through a system
                                 color: Color::srgba(1., 1., 1., 0.125),
                             },
