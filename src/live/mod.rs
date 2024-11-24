@@ -158,6 +158,7 @@ impl Plugin for LiveActionPlugin {
                     weapon::process_new_weapon,
                     weapon::process_approach_weapon_cube,
                     phase::process_approach_dread,
+                    phase::process_approach_move_on,
                     button_system::<weapon::WeaponButton>,
                     on_enter_next_level,
                 )

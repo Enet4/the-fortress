@@ -42,6 +42,8 @@ pub enum PlayerMovement {
     /// Moving along the corridor
     #[default]
     Walking,
+    /// Moving slowly along the corridor, usually temporary
+    Slower,
     /// Stopping abruptly
     Halting,
 }
@@ -51,6 +53,10 @@ pub fn process_player_movement(
     mut query: Query<(&PlayerMovement, &mut Velocity), With<Player>>,
 ) {
     let elapsed = time.delta_seconds();
+
+    const MAX_SPEED: f32 = 11.;
+    const SLOW_SPEED: f32 = 6.;
+
     for (movement, mut velocity) in query.iter_mut() {
         match movement {
             PlayerMovement::Idle => {
@@ -59,7 +65,15 @@ pub fn process_player_movement(
             }
             PlayerMovement::Walking => {
                 // increase Z velocity up to a maximum
-                velocity.0.z = (velocity.0.z + 8. * elapsed).min(12.);
+                velocity.0.z = (velocity.0.z + 8. * elapsed).min(MAX_SPEED);
+            }
+            PlayerMovement::Slower => {
+                // adjust Z velocity until it reaches the one desired
+                if velocity.0.z > SLOW_SPEED {
+                    velocity.0.z = (velocity.0.z - 6. * elapsed).max(SLOW_SPEED);
+                } else {
+                    velocity.0.z = (velocity.0.z + 6. * elapsed).min(SLOW_SPEED);
+                }
             }
             PlayerMovement::Halting => {
                 // stop the player

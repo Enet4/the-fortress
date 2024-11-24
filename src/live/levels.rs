@@ -122,6 +122,7 @@ pub enum ThingKind {
     MobSpawner(MobSpawner),
     Interlude(InterludeSpec),
     Dread,
+    MoveOn,
 }
 
 impl From<MobSpawner> for ThingKind {
@@ -180,17 +181,23 @@ impl LevelSpec {
 
                 // teeny jumpscare
                 (
-                    0.33,
+                    0.3,
                     ThingKind::Dread,
                 ).into(),
 
                 // message from the wizard
                 (
-                    0.4,
+                    0.425,
                     InterludeSpec::from_sequence([
                         (include_str!("./interludes/2_1.txt"), None),
                         (include_str!("./interludes/2_2.txt"), None),
                     ])
+                ).into(),
+
+                // recover from dread
+                (
+                    0.5,
+                    ThingKind::MoveOn,
                 ).into(),
 
                 // add a weapon cube

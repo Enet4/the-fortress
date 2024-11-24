@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 use crate::{assets::AudioHandles, postprocess::PostProcessSettings};
 
-use super::player::Player;
+use super::player::{Player, PlayerMovement};
 
 /// Component for triggers which activate when the player reaches a certain Z coordinate.
 ///
@@ -35,12 +35,12 @@ pub struct Dread;
 
 pub fn process_approach_dread(
     mut cmd: Commands,
-    player_q: Query<&Transform, With<Player>>,
+    mut player_q: Query<(&Transform, &mut PlayerMovement), With<Player>>,
     trigger_q: Query<(Entity, &PhaseTrigger), With<Dread>>,
     mut postprocess_settings_q: Query<&mut PostProcessSettings>,
     audio_handles: Res<AudioHandles>,
 ) {
-    let Ok(player_transform) = player_q.get_single() else {
+    let Ok((player_transform, mut player_movement)) = player_q.get_single_mut() else {
         return;
     };
 
@@ -54,6 +54,34 @@ pub fn process_approach_dread(
 
             // play dread sound
             audio_handles.play_dread(&mut cmd);
+
+            // slow the player down a bit
+            *player_movement = PlayerMovement::Slower;
+
+            // remove entity entirely, no longer needed
+            cmd.entity(entity).despawn();
+        }
+    }
+}
+
+/// Custom effect to make the player walk at normal speed,
+/// recovering from the dread.
+#[derive(Debug, Component)]
+pub struct MoveOn;
+
+pub fn process_approach_move_on(
+    mut cmd: Commands,
+    mut player_q: Query<(&Transform, &mut PlayerMovement), With<Player>>,
+    trigger_q: Query<(Entity, &PhaseTrigger), With<MoveOn>>,
+) {
+    let Ok((player_transform, mut player_movement)) = player_q.get_single_mut() else {
+        return;
+    };
+
+    for (entity, trigger) in &trigger_q {
+        if trigger.should_trigger(&player_transform.translation) {
+            // recover
+            *player_movement = PlayerMovement::Walking;
 
             // remove entity entirely, no longer needed
             cmd.entity(entity).despawn();

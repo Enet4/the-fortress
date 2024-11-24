@@ -12,7 +12,7 @@ use crate::structure;
 
 use super::{
     levels::{CurrentLevel, Thing, ThingKind},
-    phase::{Dread, PhaseTrigger},
+    phase::{Dread, MoveOn, PhaseTrigger},
     player::spawn_player,
     weapon::{spawn_weapon_cube, WeaponCubeAssets},
 };
@@ -219,6 +219,14 @@ pub fn setup_scene(
                     OnLive,
                     PhaseTrigger::new_by_corridor(corridor_length, *at),
                     Dread,
+                ));
+            }
+            ThingKind::MoveOn => {
+                // a custom effect to recover from dread
+                cmd.spawn((
+                    OnLive,
+                    PhaseTrigger::new_by_corridor(corridor_length, *at),
+                    MoveOn,
                 ));
             }
         }

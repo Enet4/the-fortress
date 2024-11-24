@@ -125,6 +125,7 @@ pub fn spawn_interlude(
             background_color: Color::BLACK.into(),
             border_color: Color::WHITE.into(),
             border_radius: BorderRadius::all(Val::Px(2.)),
+            z_index: ZIndex::Global(9),
             ..default()
         },
     ))
