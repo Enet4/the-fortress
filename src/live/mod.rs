@@ -1,4 +1,6 @@
 //! The live action module, containing the active game logic
+use std::fmt;
+
 use bevy::{prelude::*, time::Stopwatch, ui::FocusPolicy};
 use bevy_mod_picking::{
     events::{Click, Pointer},
@@ -38,7 +40,7 @@ use crate::{
     logic::{Num, TargetRule},
     structure::Fork,
     ui::{button_system, spawn_button_in_group, spawn_button_with_style, MeterBundle},
-    AppState,
+    AppState, GameSettings,
 };
 
 use super::CameraMarker;
@@ -150,7 +152,7 @@ impl Plugin for LiveActionPlugin {
                     mob::spawn_mobs,
                     mob::destroy_spawner_when_done,
                     process_damage_player,
-                    process_live_time,
+                    (process_live_time, update_timer_text).chain(),
                     weapon::process_weapon_change,
                     weapon::trigger_weapon,
                     weapon::process_new_weapon,
@@ -245,6 +247,17 @@ impl LiveTime {
 
     pub fn elapsed_seconds(&self) -> f32 {
         self.0.elapsed_secs() as f32
+    }
+}
+
+impl fmt::Display for LiveTime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // mm:ss.SS
+        let elapsed = self.0.elapsed_secs();
+        let elapsed_whole = elapsed as i64;
+        let minutes = elapsed_whole / 60;
+        let rest = elapsed - (minutes as f32 * 60.);
+        write!(f, "{minutes:02}:{rest:04.2}")
     }
 }
 
@@ -360,8 +373,12 @@ enum DefeatButtonAction {
     GiveUp,
 }
 
+/// Marker component for the text entity showing the game timer.
+#[derive(Debug, Component)]
+pub struct TimeIndicator;
+
 /// Set up the main UI components in the game for the first time
-fn setup_ui(mut cmd: Commands) {
+fn setup_ui(mut cmd: Commands, game_settings: Res<GameSettings>) {
     // Node for the bottom HUD
     cmd.spawn((
         OnLive,
@@ -408,6 +425,33 @@ fn setup_ui(mut cmd: Commands) {
             MeterBundle::new(Val::Px(42.), Color::srgba_u8(0, 224, 7, 192)),
             HealthMeter,
         ));
+
+        // if enabled, add timer indicator
+
+        if game_settings.show_timer {
+            root.spawn((
+                TimeIndicator,
+                TextBundle {
+                    text: Text::from_section(
+                        "00:00.00",
+                        TextStyle {
+                            color: Color::WHITE,
+                            font_size: 24.,
+                            ..default()
+                        },
+                    ),
+                    focus_policy: FocusPolicy::Pass,
+                    style: Style {
+                        left: Val::Px(4.),
+                        top: Val::Px(4.),
+                        bottom: Val::Px(4.),
+                        right: Val::Auto,
+                        ..default()
+                    },
+                    ..default()
+                },
+            ));
+        }
     });
 
     // node for the pausing screen, which is hidden by default
@@ -487,6 +531,20 @@ fn setup_ui(mut cmd: Commands) {
         // button to return to main menu
         spawn_button_in_group(cmd, "Give Up", DefeatButton, DefeatButtonAction::GiveUp);
     });
+}
+
+/// system that updates the timer indicator with the time passed
+fn update_timer_text(
+    live_time: Res<LiveTime>,
+    mut time_text_q: Query<&mut Text, With<TimeIndicator>>,
+) {
+    for mut time_text in &mut time_text_q {
+        let Some(section) = time_text.sections.get_mut(0) else {
+            continue;
+        };
+
+        section.value = live_time.to_string();
+    }
 }
 
 /// system which handles button presses in the paused screen
