@@ -264,7 +264,7 @@ impl fmt::Display for LiveTime {
         let elapsed_whole = elapsed as i64;
         let minutes = elapsed_whole / 60;
         let rest = elapsed - (minutes as f32 * 60.);
-        write!(f, "{minutes:02}:{rest:04.2}")
+        write!(f, "{minutes:02}:{rest:05.2}")
     }
 }
 
@@ -423,20 +423,7 @@ fn setup_ui(mut cmd: Commands, default_font: Res<DefaultFont>, game_settings: Re
             },
         ));
 
-        // insert cooldown meter
-        root.spawn((
-            MeterBundle::new(Val::Px(10.), Color::srgba_u8(0, 63, 255, 192)),
-            CooldownMeter,
-        ));
-
-        // insert health meter
-        root.spawn((
-            MeterBundle::new(Val::Px(42.), Color::srgba_u8(0, 224, 7, 192)),
-            HealthMeter,
-        ));
-
         // if enabled, add timer indicator
-
         if game_settings.show_timer {
             root.spawn((
                 TimeIndicator,
@@ -462,6 +449,18 @@ fn setup_ui(mut cmd: Commands, default_font: Res<DefaultFont>, game_settings: Re
                 },
             ));
         }
+
+        // insert cooldown meter
+        root.spawn((
+            MeterBundle::new(Val::Px(10.), Color::srgba_u8(0, 63, 255, 192)),
+            CooldownMeter,
+        ));
+
+        // insert health meter
+        root.spawn((
+            MeterBundle::new(Val::Px(42.), Color::srgba_u8(0, 224, 7, 192)),
+            HealthMeter,
+        ));
     });
 
     // node for the pausing screen, which is hidden by default
