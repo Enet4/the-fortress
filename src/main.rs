@@ -1,4 +1,4 @@
-use assets::TextureHandles;
+use assets::{AudioHandles, TextureHandles};
 use bevy::{
     asset::AssetMetaCheck,
     prelude::*,
@@ -37,8 +37,6 @@ pub enum AppState {
 pub struct GameSettings {
     /// whether to show the amount of time the player is taking
     show_timer: bool,
-    /// whether to enable sound
-    sound: bool,
     /// whether to skip interludes
     /// (it will not skip the ones ending the game at the end of the sequence)
     skip_interludes: bool,
@@ -48,7 +46,6 @@ impl Default for GameSettings {
     fn default() -> Self {
         Self {
             show_timer: false,
-            sound: true,
             skip_interludes: false,
         }
     }
@@ -106,6 +103,7 @@ fn main() {
         .init_resource::<TextBuffer>()
         // add resources which we want to be able to load early
         .init_resource::<TextureHandles>()
+        .init_resource::<AudioHandles>()
         // add main state
         .init_state::<AppState>()
         .run();

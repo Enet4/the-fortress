@@ -29,6 +29,7 @@ use weapon::{ChangeWeapon, PlayerAttack, WeaponCubeAssets};
 pub use weapon::TriggerWeapon;
 
 use crate::{
+    assets::AudioHandles,
     despawn_all_at,
     effect::{
         self, apply_collapse, apply_rotation, apply_velocity, stay_on_floor, time_to_live,
@@ -490,6 +491,7 @@ fn setup_ui(mut cmd: Commands) {
 
 /// system which handles button presses in the paused screen
 fn paused_button_action(
+    mut cmd: Commands,
     mut interaction_query: Query<
         (&Interaction, &PausedButtonAction),
         (Changed<Interaction>, With<Button>),
@@ -497,9 +499,11 @@ fn paused_button_action(
     mut paused_node_q: Query<&mut Style, With<PausedDiv>>,
     mut live_state: ResMut<NextState<LiveState>>,
     mut game_state: ResMut<NextState<AppState>>,
+    audio_handles: Res<AudioHandles>,
 ) {
     for (interaction, pause_button_action) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
+            audio_handles.play_zipclick(&mut cmd);
             match pause_button_action {
                 PausedButtonAction::Resume => {
                     for mut style in paused_node_q.iter_mut() {
@@ -520,6 +524,7 @@ fn paused_button_action(
 
 /// system which handles button presses in the defeat screen
 fn defeat_button_action(
+    mut cmd: Commands,
     mut interaction_query: Query<
         (&Interaction, &DefeatButtonAction),
         (Changed<Interaction>, With<Button>),
@@ -527,9 +532,11 @@ fn defeat_button_action(
     mut defeat_node_q: Query<&mut Style, With<DefeatDiv>>,
     mut live_state: ResMut<NextState<LiveState>>,
     mut game_state: ResMut<NextState<AppState>>,
+    audio_handles: Res<AudioHandles>,
 ) {
     for (interaction, pause_button_action) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
+            audio_handles.play_zipclick(&mut cmd);
             match pause_button_action {
                 DefeatButtonAction::Restart => {
                     let Ok(mut defeat_node_style) = defeat_node_q.get_single_mut() else {
@@ -703,11 +710,16 @@ fn spawn_decision_arrows(cmd: &mut Commands) {
 
 /// system that handles the choice of the player
 fn decision_action(
+    mut cmd: Commands,
     mut interaction_query: Query<(&Interaction, &Decision), (Changed<Interaction>, With<Button>)>,
     mut advance_level_events: EventWriter<AdvanceLevel>,
+    audio_handles: Res<AudioHandles>,
 ) {
     for (interaction, decision) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
+            // play sound
+            audio_handles.play_zipclick(&mut cmd);
+
             advance_level_events.send(AdvanceLevel(*decision));
             break;
         }

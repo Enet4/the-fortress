@@ -8,6 +8,7 @@ use bevy::{
 use bevy_mod_picking::prelude::*;
 
 use crate::{
+    assets::AudioHandles,
     effect::{Rotating, TimeToLive, Velocity},
     logic::Num,
     postprocess::PostProcessSettings,
@@ -362,6 +363,7 @@ pub fn weapon_keyboard_input(
     mut keyboard_input: EventReader<KeyboardInput>,
     weapon_button_q: Query<(Entity, &WeaponButton, Has<WeaponSelected>)>,
     mut change_weapon: EventWriter<ChangeWeapon>,
+    audio_handles: Res<AudioHandles>,
 ) {
     for ev in keyboard_input.read() {
         let KeyboardInput {
@@ -384,6 +386,9 @@ pub fn weapon_keyboard_input(
                         cmd.entity(entity).insert(WeaponSelected);
                         // perform weapon selection
                         change_weapon.send(ChangeWeapon { num });
+
+                        // play sound
+                        audio_handles.play_equipmentclick01(&mut cmd);
                         break;
                     } else {
                         cmd.entity(entity).remove::<WeaponSelected>();
@@ -413,6 +418,7 @@ pub fn weapon_button_action(
     >,
     mut weapon_button_q: Query<Entity, With<WeaponButton>>,
     mut events: EventWriter<ChangeWeapon>,
+    audio_handles: Res<AudioHandles>,
 ) {
     for (entity, interaction, weapon_button, is_selected) in &mut interaction_query {
         if *interaction != Interaction::Pressed {
@@ -422,6 +428,9 @@ pub fn weapon_button_action(
             // already selected, do nothing
             continue;
         }
+
+        // play sounds
+        audio_handles.play_equipmentclick01(&mut cmd);
 
         // traverse all buttons to update the selected weapon
         for e in &mut weapon_button_q {
@@ -434,6 +443,7 @@ pub fn weapon_button_action(
             }
         }
 
+        // change weapon
         events.send(ChangeWeapon {
             num: weapon_button.num,
         });

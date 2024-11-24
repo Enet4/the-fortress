@@ -3,6 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
+    assets::AudioHandles,
     despawn_all_at,
     ui::{button_system, spawn_button},
     AppState, CameraMarker, GameSettings,
@@ -150,7 +151,11 @@ pub fn main_menu_setup(mut cmd: Commands) {
 pub struct OnSettingsMenu;
 
 /// system to spawn the main menu UI
-pub fn settings_menu_setup(mut cmd: Commands) {
+pub fn settings_menu_setup(
+    mut cmd: Commands,
+    game_settings: Res<GameSettings>,
+    audio_handles: Res<AudioHandles>,
+) {
     // division for main buttons
     cmd.spawn((
         OnSettingsMenu,
@@ -172,18 +177,32 @@ pub fn settings_menu_setup(mut cmd: Commands) {
         },
     ))
     .with_children(|cmd| {
-        spawn_button(cmd, "Show Timer: OFF", MenuButtonAction::ToggleTimer);
-        spawn_button(
-            cmd,
-            "Skip Interludes: OFF",
-            MenuButtonAction::ToggleInterludes,
-        );
-        spawn_button(cmd, "Sound: ON", MenuButtonAction::ToggleSound);
+        let timer_msg = if game_settings.show_timer {
+            "Show Timer: ON"
+        } else {
+            "Show Timer: OFF"
+        };
+        spawn_button(cmd, timer_msg, MenuButtonAction::ToggleTimer);
+
+        let interludes_msg = if game_settings.skip_interludes {
+            "Skip Interludes: ON"
+        } else {
+            "Skip Interludes: OFF"
+        };
+        spawn_button(cmd, interludes_msg, MenuButtonAction::ToggleInterludes);
+
+        let sound_msg = if audio_handles.enabled {
+            "Sound: ON"
+        } else {
+            "Sound: OFF"
+        };
+        spawn_button(cmd, sound_msg, MenuButtonAction::ToggleSound);
         spawn_button(cmd, "Back", MenuButtonAction::BackToMainMenu);
     });
 }
 
 fn menu_action(
+    mut cmd: Commands,
     mut interaction_query: Query<
         (&Interaction, &MenuButtonAction, &Children),
         (Changed<Interaction>, With<Button>),
@@ -192,6 +211,7 @@ fn menu_action(
     mut menu_state: ResMut<NextState<MenuState>>,
     mut game_state: ResMut<NextState<AppState>>,
     mut settings: ResMut<GameSettings>,
+    mut audio_handles: ResMut<AudioHandles>,
     mut button_text_q: Query<&mut Text>,
 ) {
     for (interaction, menu_button_action, children) in &mut interaction_query {
@@ -208,8 +228,8 @@ fn menu_action(
                 MenuButtonAction::BackToMainMenu => menu_state.set(MenuState::Main),
 
                 MenuButtonAction::ToggleSound => {
-                    settings.sound = !settings.sound;
-                    let new_text = if settings.sound {
+                    audio_handles.enabled = !audio_handles.enabled;
+                    let new_text = if audio_handles.enabled {
                         "Sound: ON"
                     } else {
                         "Sound: OFF"
@@ -248,6 +268,8 @@ fn menu_action(
                     }
                 }
             }
+            // play sound
+            audio_handles.play_zipclick(&mut cmd);
         }
     }
 }
