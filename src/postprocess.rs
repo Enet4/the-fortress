@@ -322,9 +322,17 @@ pub fn oscillate_dithering(mut settings: Query<&mut PostProcessSettings>, time: 
 /// Diminish the intensity of the dithering effect over time
 pub fn fadeout_dithering(mut settings: Query<&mut PostProcessSettings>, time: Res<Time>) {
     for mut setting in &mut settings {
-        let d = (time.delta_seconds_f64() as f32) * 1.5;
+        let d = time.delta_seconds();
+
+        let factor = if setting.intensity > 0.75 {
+            d * 0.5
+        } else if setting.intensity > 0.5 {
+            d * 0.75
+        } else {
+            d * 1.5
+        };
 
         // Apply the intensity
-        setting.intensity = (setting.intensity - d).max(0.0);
+        setting.intensity = (setting.intensity - factor).max(0.);
     }
 }
