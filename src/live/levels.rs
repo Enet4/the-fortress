@@ -121,6 +121,7 @@ pub enum ThingKind {
     WeaponCube { x: f32, num: Num },
     MobSpawner(MobSpawner),
     Interlude(InterludeSpec),
+    Dread,
 }
 
 impl From<MobSpawner> for ThingKind {
@@ -166,7 +167,7 @@ impl LevelSpec {
 
     fn level_0() -> Self {
         LevelSpec {
-            corridor_length: 140.,
+            corridor_length: 150.,
             things: vec![
                 // starting story
                 (
@@ -177,8 +178,13 @@ impl LevelSpec {
                     ])
                 ).into(),
 
-                // message from the wizard
+                // teeny jumpscare
+                (
+                    0.33,
+                    ThingKind::Dread,
+                ).into(),
 
+                // message from the wizard
                 (
                     0.4,
                     InterludeSpec::from_sequence([
@@ -189,18 +195,19 @@ impl LevelSpec {
 
                 // add a weapon cube
                 (
-                    0.45,
+                    0.5,
                     ThingKind::WeaponCube { x: 0., num: 2.into() }
                 ).into(),
 
                 // add a mob spawner that spawns a single mob
                 (
-                    0.6,
+                    0.62,
                     MobSpawner::new(1, 2., vec![2.into()]),
                 ).into(),
+
                 // an interlude just before the fork
                 (
-                    0.92,
+                    0.95,
                     InterludeSpec::from_sequence([
                         (
                             "At the end of the corridor, you see two possible paths. There appear to be no distinct visual cues between the two.",

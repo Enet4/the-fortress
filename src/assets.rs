@@ -40,6 +40,7 @@ pub struct AudioHandles {
     pub enabled: bool,
     pub zipclick: Handle<AudioSource>,
     pub equipmentclick01: Handle<AudioSource>,
+    pub dread: Handle<AudioSource>,
 }
 
 impl FromWorld for AudioHandles {
@@ -47,32 +48,40 @@ impl FromWorld for AudioHandles {
         let asset_server = world.get_resource::<AssetServer>().unwrap();
         let zipclick = asset_server.load("audio/zipclick.ogg");
         let equipmentclick01 = asset_server.load("audio/equipmentclick01.ogg");
+        let dread = asset_server.load("audio/dread.ogg");
 
         AudioHandles {
             enabled: true,
             zipclick,
             equipmentclick01,
+            dread,
         }
     }
 }
 
 impl AudioHandles {
     pub fn play_zipclick<'a>(&self, cmd: &'a mut Commands) -> Option<EntityCommands<'a>> {
-        if !self.enabled {
-            return None;
-        }
-        Some(cmd.spawn(AudioBundle {
-            source: self.zipclick.clone(),
-            ..default()
-        }))
+        self.play_impl(cmd, &self.zipclick)
     }
 
     pub fn play_equipmentclick01<'a>(&self, cmd: &'a mut Commands) -> Option<EntityCommands<'a>> {
+        self.play_impl(cmd, &self.equipmentclick01)
+    }
+
+    pub fn play_dread<'a>(&self, cmd: &'a mut Commands) -> Option<EntityCommands<'a>> {
+        self.play_impl(cmd, &self.dread)
+    }
+
+    fn play_impl<'a>(
+        &self,
+        cmd: &'a mut Commands,
+        handle: &Handle<AudioSource>,
+    ) -> Option<EntityCommands<'a>> {
         if !self.enabled {
             return None;
         }
         Some(cmd.spawn(AudioBundle {
-            source: self.equipmentclick01.clone(),
+            source: handle.clone(),
             ..default()
         }))
     }

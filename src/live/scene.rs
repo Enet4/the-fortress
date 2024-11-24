@@ -12,7 +12,7 @@ use crate::structure;
 
 use super::{
     levels::{CurrentLevel, Thing, ThingKind},
-    phase::PhaseTrigger,
+    phase::{Dread, PhaseTrigger},
     player::spawn_player,
     weapon::{spawn_weapon_cube, WeaponCubeAssets},
 };
@@ -211,6 +211,14 @@ pub fn setup_scene(
                     OnLive,
                     PhaseTrigger::new_by_corridor(corridor_length, *at),
                     spec.clone(),
+                ));
+            }
+            ThingKind::Dread => {
+                // a custom effect which happens in the first level
+                cmd.spawn((
+                    OnLive,
+                    PhaseTrigger::new_by_corridor(corridor_length, *at),
+                    Dread,
                 ));
             }
         }

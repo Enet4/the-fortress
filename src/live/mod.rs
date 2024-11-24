@@ -157,6 +157,7 @@ impl Plugin for LiveActionPlugin {
                     weapon::trigger_weapon,
                     weapon::process_new_weapon,
                     weapon::process_approach_weapon_cube,
+                    phase::process_approach_dread,
                     button_system::<weapon::WeaponButton>,
                     on_enter_next_level,
                 )
@@ -686,7 +687,7 @@ pub fn process_end_of_corridor(
     };
 
     let player_pos = player_transform.translation;
-    if player_pos.z + 14. >= fork_transform.translation.z {
+    if player_pos.z + 13. >= fork_transform.translation.z {
         // stop walking
         *player_movement = PlayerMovement::Idle;
 

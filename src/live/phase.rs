@@ -1,6 +1,10 @@
 //! Module for holding phase triggers.
 use bevy::prelude::*;
 
+use crate::{assets::AudioHandles, postprocess::PostProcessSettings};
+
+use super::player::Player;
+
 /// Component for triggers which activate when the player reaches a certain Z coordinate.
 ///
 /// It is expected that this trigger is removed after it is activated.
@@ -22,5 +26,37 @@ impl PhaseTrigger {
 
     pub fn should_trigger(&self, player_translate: &Vec3) -> bool {
         player_translate.z >= self.at_z
+    }
+}
+
+/// Custom effect to create a sense of dread.
+#[derive(Debug, Component)]
+pub struct Dread;
+
+pub fn process_approach_dread(
+    mut cmd: Commands,
+    player_q: Query<&Transform, With<Player>>,
+    trigger_q: Query<(Entity, &PhaseTrigger), With<Dread>>,
+    mut postprocess_settings_q: Query<&mut PostProcessSettings>,
+    audio_handles: Res<AudioHandles>,
+) {
+    let Ok(player_transform) = player_q.get_single() else {
+        return;
+    };
+
+    for (entity, trigger) in &trigger_q {
+        if trigger.should_trigger(&player_transform.translation) {
+            // set postprocessing to the max
+            let Ok(mut postprocess_settings) = postprocess_settings_q.get_single_mut() else {
+                continue;
+            };
+            postprocess_settings.intensity = 1.;
+
+            // play dread sound
+            audio_handles.play_dread(&mut cmd);
+
+            // remove entity entirely, no longer needed
+            cmd.entity(entity).despawn();
+        }
     }
 }
