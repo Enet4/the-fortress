@@ -6,7 +6,21 @@ use bevy::{
     render::texture::{
         ImageAddressMode, ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor,
     },
+    text::Font,
 };
+
+#[derive(Debug, Clone, Resource)]
+pub struct DefaultFont(pub Handle<Font>);
+
+impl FromWorld for DefaultFont {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.get_resource::<AssetServer>().unwrap();
+
+        let font = asset_server.load("font/LibreCaslonTextRegular.ttf");
+
+        DefaultFont(font)
+    }
+}
 
 #[derive(Debug, Resource)]
 pub struct TextureHandles {

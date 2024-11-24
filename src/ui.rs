@@ -52,6 +52,7 @@ const PRESSED_BUTTON: Color = Color::srgb(0.5, 0.5, 0.5);
 
 fn spawn_button_impl<'a, A, G>(
     cmd: &'a mut ChildBuilder<'_>,
+    font: Handle<Font>,
     text: impl Into<String>,
     style: Option<Style>,
     group: Option<G>,
@@ -96,7 +97,8 @@ where
             text: Text::from_section(
                 text,
                 TextStyle {
-                    font_size: 32.,
+                    font,
+                    font_size: 36.,
                     color: NORMAL_BUTTON,
                     ..default()
                 },
@@ -119,6 +121,7 @@ where
 
 pub fn spawn_button_with_style<'a, A>(
     cmd: &'a mut ChildBuilder<'_>,
+    font: Handle<Font>,
     text: impl Into<String>,
     style: Style,
     action: A,
@@ -126,11 +129,12 @@ pub fn spawn_button_with_style<'a, A>(
 where
     A: Component,
 {
-    spawn_button_impl(cmd, text, Some(style), None::<Button>, action)
+    spawn_button_impl(cmd, font, text, Some(style), None::<Button>, action)
 }
 
 pub fn spawn_button_in_group_with_style<'a, A, G>(
     cmd: &'a mut ChildBuilder<'_>,
+    font: Handle<Font>,
     text: impl Into<String>,
     style: Style,
     group: G,
@@ -140,11 +144,12 @@ where
     A: Component,
     G: Component,
 {
-    spawn_button_impl(cmd, text, Some(style), Some(group), action)
+    spawn_button_impl(cmd, font, text, Some(style), Some(group), action)
 }
 
 pub fn spawn_button_in_group<'a, A, G>(
     cmd: &'a mut ChildBuilder<'_>,
+    font: Handle<Font>,
     text: impl Into<String>,
     group: G,
     action: A,
@@ -153,20 +158,21 @@ where
     A: Component,
     G: Component,
 {
-    spawn_button_impl(cmd, text, None, Some(group), action)
+    spawn_button_impl(cmd, font, text, None, Some(group), action)
 }
 
 /// Spawn a button, no group, default styles
 #[inline]
 pub fn spawn_button<'a, A>(
     cmd: &'a mut ChildBuilder<'_>,
+    font: Handle<Font>,
     text: impl Into<String>,
     action: A,
 ) -> EntityCommands<'a>
 where
     A: Component,
 {
-    spawn_button_impl(cmd, text, None, None::<Button>, action)
+    spawn_button_impl(cmd, font, text, None, None::<Button>, action)
 }
 
 #[derive(Debug, Component)]

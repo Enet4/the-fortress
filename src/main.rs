@@ -1,4 +1,4 @@
-use assets::{AudioHandles, TextureHandles};
+use assets::{AudioHandles, DefaultFont, TextureHandles};
 use bevy::{
     asset::AssetMetaCheck,
     prelude::*,
@@ -98,6 +98,7 @@ fn main() {
         )
         .add_systems(PostUpdate, (effect::apply_glimmer,))
         // add resources which are used globally
+        .init_resource::<DefaultFont>()
         .init_resource::<GameSettings>()
         .init_resource::<Cheats>()
         .init_resource::<TextBuffer>()

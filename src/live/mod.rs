@@ -31,7 +31,7 @@ use weapon::{ChangeWeapon, PlayerAttack, WeaponCubeAssets};
 pub use weapon::TriggerWeapon;
 
 use crate::{
-    assets::AudioHandles,
+    assets::{AudioHandles, DefaultFont},
     despawn_all_at,
     effect::{
         self, apply_collapse, apply_rotation, apply_velocity, stay_on_floor, time_to_live,
@@ -385,7 +385,9 @@ enum DefeatButtonAction {
 pub struct TimeIndicator;
 
 /// Set up the main UI components in the game for the first time
-fn setup_ui(mut cmd: Commands, game_settings: Res<GameSettings>) {
+fn setup_ui(mut cmd: Commands, default_font: Res<DefaultFont>, game_settings: Res<GameSettings>) {
+    let font = &default_font.0;
+
     // Node for the bottom HUD
     cmd.spawn((
         OnLive,
@@ -443,6 +445,7 @@ fn setup_ui(mut cmd: Commands, game_settings: Res<GameSettings>) {
                         "00:00.00",
                         TextStyle {
                             color: Color::WHITE,
+                            font: font.clone(),
                             font_size: 24.,
                             ..default()
                         },
@@ -482,10 +485,22 @@ fn setup_ui(mut cmd: Commands, game_settings: Res<GameSettings>) {
     ))
     .with_children(|cmd| {
         // button to resume the game
-        spawn_button_in_group(cmd, "Resume", PauseButton, PausedButtonAction::Resume);
+        spawn_button_in_group(
+            cmd,
+            font.clone(),
+            "Resume",
+            PauseButton,
+            PausedButtonAction::Resume,
+        );
 
         // button to return to main menu
-        spawn_button_in_group(cmd, "Give Up", PauseButton, PausedButtonAction::GiveUp);
+        spawn_button_in_group(
+            cmd,
+            font.clone(),
+            "Give Up",
+            PauseButton,
+            PausedButtonAction::GiveUp,
+        );
     });
 
     // node for the defeat screen, which is also hidden by default
@@ -520,6 +535,7 @@ fn setup_ui(mut cmd: Commands, game_settings: Res<GameSettings>) {
                 "Try Again?",
                 TextStyle {
                     color: Color::srgb(0.85, 0.85, 0.85),
+                    font: font.clone(),
                     font_size: 32.,
                     ..default()
                 },
@@ -530,13 +546,20 @@ fn setup_ui(mut cmd: Commands, game_settings: Res<GameSettings>) {
         // button to restart the current level
         spawn_button_in_group(
             cmd,
+            font.clone(),
             "Restart Level",
             DefeatButton,
             DefeatButtonAction::Restart,
         );
 
         // button to return to main menu
-        spawn_button_in_group(cmd, "Give Up", DefeatButton, DefeatButtonAction::GiveUp);
+        spawn_button_in_group(
+            cmd,
+            font.clone(),
+            "Give Up",
+            DefeatButton,
+            DefeatButtonAction::GiveUp,
+        );
     });
 }
 
@@ -676,6 +699,7 @@ pub fn process_end_of_corridor(
         (With<Player>, Changed<Transform>),
     >,
     fork_q: Query<&Transform, With<Fork>>,
+    default_font: Res<DefaultFont>,
 ) {
     // retrieve player
     let Ok((mut player_movement, mut health, player_transform)) = player_q.get_single_mut() else {
@@ -696,7 +720,7 @@ pub fn process_end_of_corridor(
         health.replenish();
 
         // and spawn new input arrows to select which way to go
-        spawn_decision_arrows(&mut cmd);
+        spawn_decision_arrows(&mut cmd, default_font);
     }
 }
 
@@ -710,7 +734,8 @@ enum Decision {
     Right,
 }
 
-fn spawn_decision_arrows(cmd: &mut Commands) {
+fn spawn_decision_arrows(cmd: &mut Commands, default_font: Res<DefaultFont>) {
+    let font = &default_font.0;
     cmd.spawn((
         OnLive,
         DecisionArrowsDiv,
@@ -738,6 +763,7 @@ fn spawn_decision_arrows(cmd: &mut Commands) {
     .with_children(|cmd| {
         spawn_button_with_style(
             cmd,
+            font.clone(),
             "<",
             Style {
                 width: Val::Px(200.),
@@ -755,6 +781,7 @@ fn spawn_decision_arrows(cmd: &mut Commands) {
         );
         spawn_button_with_style(
             cmd,
+            font.clone(),
             ">",
             Style {
                 width: Val::Px(200.),

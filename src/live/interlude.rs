@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 
-use crate::{AppState, GameSettings};
+use crate::{assets::DefaultFont, AppState, GameSettings};
 
 use super::{phase::PhaseTrigger, player::Player, LiveState};
 
@@ -102,11 +102,14 @@ pub struct FadeOut;
 pub fn spawn_interlude(
     cmd: &mut Commands,
     spec: InterludeSpec,
+    default_font: &DefaultFont,
     asset_server: &AssetServer,
 ) -> Entity {
     let message = spec.message.clone();
 
     let image = spec.image.map(|path| asset_server.load(path));
+
+    let font = &default_font.0;
 
     cmd.spawn((
         spec,
@@ -197,10 +200,10 @@ pub fn spawn_interlude(
                         sections: vec![TextSection {
                             value: message.into(),
                             style: TextStyle {
-                                font_size: 28.,
+                                font: font.clone(),
+                                font_size: 30.,
                                 // start invisible, will move up through a system
                                 color: Color::srgba(1., 1., 1., 0.125),
-                                font: Default::default(),
                             },
                         }],
                     },
@@ -219,6 +222,7 @@ pub fn process_interlude_trigger(
     player_q: Query<&Transform, With<Player>>,
     mut next_state: ResMut<NextState<LiveState>>,
     asset_server: Res<AssetServer>,
+    default_font: Res<DefaultFont>,
 ) {
     let Ok(player_transform) = player_q.get_single() else {
         return;
@@ -232,7 +236,7 @@ pub fn process_interlude_trigger(
             }
 
             // spawn the interlude
-            spawn_interlude(&mut cmd, spec.clone(), &asset_server);
+            spawn_interlude(&mut cmd, spec.clone(), &default_font, &asset_server);
             // despawn the trigger
             cmd.entity(entity).despawn();
             // issue state transition
@@ -344,6 +348,7 @@ pub fn process_advance_interlude(
     mut next_live_state: ResMut<NextState<LiveState>>,
     mut next_root_state: ResMut<NextState<AppState>>,
     asset_server: Res<AssetServer>,
+    default_font: Res<DefaultFont>,
 ) {
     for event in events.read() {
         let AdvanceInterlude(entity, effect) = event;
@@ -356,7 +361,7 @@ pub fn process_advance_interlude(
             match effect {
                 InterludeEffect::Next(next_spec) => {
                     // spawn the next interlude
-                    spawn_interlude(&mut cmd, *next_spec.clone(), &asset_server);
+                    spawn_interlude(&mut cmd, *next_spec.clone(), &default_font, &asset_server);
                 }
                 InterludeEffect::Resume => {
                     // issue a state transition back to live
