@@ -53,7 +53,7 @@ fn repeat_texture(settings: &mut ImageLoaderSettings) {
 pub struct AudioHandles {
     pub enabled: bool,
     pub zipclick: Handle<AudioSource>,
-    pub equipmentclick01: Handle<AudioSource>,
+    pub equipmentclick1: Handle<AudioSource>,
     pub dread: Handle<AudioSource>,
 }
 
@@ -61,13 +61,13 @@ impl FromWorld for AudioHandles {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.get_resource::<AssetServer>().unwrap();
         let zipclick = asset_server.load("audio/zipclick.ogg");
-        let equipmentclick01 = asset_server.load("audio/equipmentclick01.ogg");
+        let equipmentclick1 = asset_server.load("audio/equipmentclick1.ogg");
         let dread = asset_server.load("audio/dread.ogg");
 
         AudioHandles {
             enabled: true,
             zipclick,
-            equipmentclick01,
+            equipmentclick1,
             dread,
         }
     }
@@ -78,8 +78,8 @@ impl AudioHandles {
         self.play_impl(cmd, &self.zipclick)
     }
 
-    pub fn play_equipmentclick01<'a>(&self, cmd: &'a mut Commands) -> Option<EntityCommands<'a>> {
-        self.play_impl(cmd, &self.equipmentclick01)
+    pub fn play_equipmentclick1<'a>(&self, cmd: &'a mut Commands) -> Option<EntityCommands<'a>> {
+        self.play_impl(cmd, &self.equipmentclick1)
     }
 
     pub fn play_dread<'a>(&self, cmd: &'a mut Commands) -> Option<EntityCommands<'a>> {

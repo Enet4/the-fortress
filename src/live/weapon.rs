@@ -388,7 +388,7 @@ pub fn weapon_keyboard_input(
                         change_weapon.send(ChangeWeapon { num });
 
                         // play sound
-                        audio_handles.play_equipmentclick01(&mut cmd);
+                        audio_handles.play_equipmentclick1(&mut cmd);
                         break;
                     } else {
                         cmd.entity(entity).remove::<WeaponSelected>();
@@ -430,7 +430,7 @@ pub fn weapon_button_action(
         }
 
         // play sounds
-        audio_handles.play_equipmentclick01(&mut cmd);
+        audio_handles.play_equipmentclick1(&mut cmd);
 
         // traverse all buttons to update the selected weapon
         for e in &mut weapon_button_q {
