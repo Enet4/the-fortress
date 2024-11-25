@@ -1,0 +1,10 @@
+[build]
+target = "index.html"          # The index HTML file to drive the bundling process.
+cargo_profile = "wasm-release"
+dist = "dist"                  # The output dir for all final assets.
+public_url = "/the-fortress"   # The public URL from which assets are to be served.
+filehash = true                # Whether to include hash values in the output file names.
+inject_scripts = true          # Whether to inject scripts (and module preloads) into the finalized output.
+locked = true                  # Require Cargo.lock is up to date
+minify = "never"               # Control minification: can be one of: never, on_release, always
+no_sri = false                 # Allow disabling sub-resource integrity (SRI)
