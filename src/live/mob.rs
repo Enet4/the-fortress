@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use bevy_mod_picking::{prelude::Pickable, PickableBundle};
+use tinyrand::RandRange;
 
 use crate::{
     effect::ScalesUp,
@@ -35,6 +36,13 @@ pub struct MobSpawner {
     pub count: u32,
 }
 
+/// Component for things containing some form of randomness.
+/// Contains a random number generator.
+#[derive(Component)]
+pub struct Randomness {
+    pub rng: tinyrand::SplitMix,
+}
+
 impl MobSpawner {
     pub fn new(count: u32, spawn_interval: f32, target_options: Vec<Num>) -> Self {
         MobSpawner::new_with_target_rule(
@@ -62,9 +70,19 @@ impl MobSpawner {
     }
 }
 
+#[derive(Bundle)]
+pub struct MobSpawnerBundle {
+    pub phase_trigger: PhaseTrigger,
+    pub transform: Transform,
+    pub spawner: MobSpawner,
+    pub random: Randomness,
+    pub on_live: OnLive,
+}
+
 pub fn destroy_spawner_when_done(mut q: Query<(Entity, &MobSpawner)>, mut commands: Commands) {
     for (entity, spawner) in q.iter_mut() {
         if spawner.count == 0 {
+            println!("Destroying mob spawner");
             commands.entity(entity).despawn();
         }
     }
@@ -84,6 +102,7 @@ pub fn process_spawner_trigger(
     let time = time.elapsed_seconds();
     for (entity, mut spawner, phase) in q.iter_mut() {
         if phase.should_trigger(&player_transform.translation) {
+            println!("Mob spawner activated");
             spawner.active = true;
             spawner.last_spawn = time - spawner.spawn_interval;
 
@@ -102,21 +121,32 @@ pub fn spawn_mobs(
     mut cmd: Commands,
     time: Res<LiveTime>,
     mob_assets: Res<MobAssets>,
-    mut mob_spawner_q: Query<(&mut MobSpawner, &Transform)>,
+    mut mob_spawner_q: Query<(&mut MobSpawner, &mut Randomness, &Transform)>,
 ) {
     let time = time.elapsed_seconds();
-    for (mut spawner, transform) in &mut mob_spawner_q {
+    for (mut spawner, mut random, transform) in &mut mob_spawner_q {
         if !spawner.active {
             continue;
         }
         let relative_elapsed = time - spawner.last_spawn;
         if relative_elapsed >= spawner.spawn_interval {
+            println!("Spawning mob");
             // spawn a mob
             // TODO use an RNG to pseudorandomize the position
-            let new_pos = transform.translation
-                + Vec3::new(0., 0., MOB_SPAWN_Z_OFFSET + spawner.count as f32 * 0.2);
-            // TODO use RNG to randomize num choice
-            let new_num = spawner.target_options[0];
+            let rel_x = (random.rng.next_range(0..9_u32) as f32 - 4.5) / 2.;
+            let rel_y = random.rng.next_range(0..4_u32) as f32 - 2.;
+            let rel_z = if spawner.count % 2 == 0 {
+                MOB_SPAWN_Z_OFFSET + (spawner.count / 2) as f32 * 0.2
+            } else {
+                MOB_SPAWN_Z_OFFSET - (spawner.count / 2) as f32 * 0.2
+            };
+            let new_pos = transform.translation + Vec3::new(rel_x, rel_y, rel_z);
+
+            let choice = random
+                .rng
+                .next_range(0..spawner.target_options.len() as u32);
+            // randomize num choice
+            let new_num = spawner.target_options[choice as usize];
 
             spawn_mob(
                 &mut cmd,

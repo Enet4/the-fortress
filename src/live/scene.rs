@@ -1,4 +1,5 @@
 use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Exposure};
+use tinyrand::{Rand, Seeded, SplitMix};
 
 use crate::{
     assets::TextureHandles,
@@ -12,6 +13,7 @@ use crate::structure;
 
 use super::{
     levels::{CurrentLevel, Thing, ThingKind},
+    mob::{MobSpawnerBundle, Randomness},
     phase::{Dread, MoveOn, PhaseTrigger},
     player::spawn_player,
     weapon::{spawn_weapon_cube, WeaponCubeAssets},
@@ -185,6 +187,10 @@ pub fn setup_scene(
         });
     });
 
+    // set up base RNG
+
+    let mut rng = SplitMix::seed(level_spec.rng_seed);
+
     // add things in the level
 
     for Thing { at, what } in &level_spec.things {
@@ -199,12 +205,19 @@ pub fn setup_scene(
                 );
             }
             ThingKind::MobSpawner(spawner) => {
-                cmd.spawn((
-                    OnLive,
-                    PhaseTrigger::new_by_corridor(corridor_length, *at),
-                    Transform::from_translation(Vec3::new(0., 4., *at * corridor_length)),
-                    spawner.clone(),
-                ));
+                cmd.spawn(MobSpawnerBundle {
+                    phase_trigger: PhaseTrigger::new_by_corridor(corridor_length, *at),
+                    transform: Transform::from_translation(Vec3::new(
+                        0.,
+                        4.,
+                        *at * corridor_length,
+                    )),
+                    random: Randomness {
+                        rng: SplitMix::seed(rng.next_u64()),
+                    },
+                    spawner: spawner.clone(),
+                    on_live: OnLive,
+                });
             }
             ThingKind::Interlude(spec) => {
                 cmd.spawn((

@@ -21,6 +21,8 @@ mod weapon;
 
 use interlude::AdvanceInterlude;
 use levels::CurrentLevel;
+use mob::MobSpawner;
+use phase::PhaseTrigger;
 use player::{
     process_attacks, process_damage_player, process_player_movement, update_player_cooldown_meter,
     update_player_health_meter, DamagePlayer, Player, PlayerMovement, TargetDestroyed,
@@ -657,23 +659,33 @@ pub fn callback_on_click(event: Listener<Pointer<Click>>, mut events: EventWrite
 /// a system to handle game state changes when a target is destroyed
 pub fn process_target_destroyed(
     mut target_destroyed_events: EventReader<TargetDestroyed>,
-    target_q: Query<(Entity, &Target), Without<Collapsing>>,
+    active_mob_spawners_q: Query<Entity, (With<MobSpawner>, Without<PhaseTrigger>)>,
+    target_q: Query<Entity, (With<Target>, Without<Collapsing>)>,
     mut player_q: Query<&mut PlayerMovement, With<Player>>,
 ) {
     let mut done = false;
     for _ in target_destroyed_events.read() {
+        println!("Target destroyed");
         if done {
             // if done, we can consume the rest of the events and continue normally
             continue;
         }
         // count the number of targets still on scene
         let num_targets = target_q.iter().count();
-        if num_targets == 0 {
-            // let's move!
-            let mut player_movement = player_q.single_mut();
-            *player_movement = PlayerMovement::Walking;
-            done = true;
+        if num_targets > 0 {
+            continue;
         }
+        // and count the number of mob spawners still on scene
+        let num_mobspawners = active_mob_spawners_q.iter().count();
+        if num_mobspawners > 0 {
+            continue;
+        }
+
+        println!("No more activity on screen");
+        // let's move!
+        let mut player_movement = player_q.single_mut();
+        *player_movement = PlayerMovement::Walking;
+        done = true;
     }
 }
 

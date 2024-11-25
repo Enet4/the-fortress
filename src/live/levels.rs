@@ -140,6 +140,8 @@ impl From<InterludeSpec> for ThingKind {
 #[derive(Debug)]
 pub struct LevelSpec {
     pub corridor_length: f32,
+    /// the seed defining reproducible behavior patterns in the level
+    pub rng_seed: u64,
     /// the things in the level
     pub things: Vec<Thing>,
 }
@@ -169,6 +171,7 @@ impl LevelSpec {
     fn level_0() -> Self {
         LevelSpec {
             corridor_length: 150.,
+            rng_seed: 0x01,
             things: vec![
                 // starting story
                 (
@@ -206,10 +209,16 @@ impl LevelSpec {
                     ThingKind::WeaponCube { x: 0., num: 2.into() }
                 ).into(),
 
-                // add a mob spawner that spawns a single mob
+                // add a mob spawner that spawns a few mobs
                 (
                     0.62,
-                    MobSpawner::new(1, 2., vec![2.into()]),
+                    MobSpawner::new(5, 2., vec![2.into()]),
+                ).into(),
+
+                // add a mob spawner that spawns a single mob
+                (
+                    0.7,
+                    MobSpawner::new(1, 2., vec![6.into()]),
                 ).into(),
 
                 // an interlude just before the fork
@@ -217,7 +226,7 @@ impl LevelSpec {
                     0.95,
                     InterludeSpec::from_sequence([
                         (
-                            "At the end of the corridor, you see two possible paths. There appear to be no distinct visual cues between the two.",
+                            "At the end of the corridor, you see two possible paths. There appear to be no remarkable differences between the two.",
                             None,
                         ),
                         ("Reluctantly, you tap into your precognitive skills, and choose.", None),
@@ -229,7 +238,7 @@ impl LevelSpec {
 
     #[deprecated(note = "just for testing purposes, get rid of this before releasing")]
     fn level_carp() -> Self {
-        Self::exit_level_impl([("You went right and died.\n\nThe End.", None)])
+        Self::exit_level_impl([("You went down a cliff.\n\nThe End.", None)])
     }
 
     /// helper function for levels which just end the game
@@ -238,6 +247,7 @@ impl LevelSpec {
     ) -> Self {
         LevelSpec {
             corridor_length: 1000.,
+            rng_seed: 0,
             things: vec![(0., InterludeSpec::from_sequence_and_exit(interludes)).into()],
         }
     }
