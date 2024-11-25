@@ -229,16 +229,16 @@ impl LevelSpec {
 
     #[deprecated(note = "just for testing purposes, get rid of this before releasing")]
     fn level_carp() -> Self {
+        Self::exit_level_impl([("You went right and died.\n\nThe End.", None)])
+    }
+
+    /// helper function for levels which just end the game
+    fn exit_level_impl(
+        interludes: impl IntoIterator<Item = (&'static str, Option<&'static str>)>,
+    ) -> Self {
         LevelSpec {
             corridor_length: 1000.,
-            things: vec![(
-                0.,
-                InterludeSpec::from_sequence_and_exit([(
-                    "You went down a cliff and died.\n\nThe End.",
-                    None,
-                )]),
-            )
-                .into()],
+            things: vec![(0., InterludeSpec::from_sequence_and_exit(interludes)).into()],
         }
     }
 }
