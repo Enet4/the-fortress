@@ -2,12 +2,12 @@
 use bevy::{math::bounding::Aabb3d, prelude::*};
 
 #[derive(Debug, Component)]
-pub struct Collidable {
+pub struct CollidableBox {
     /// the bounding box dimensions
     pub dim: Vec3,
 }
 
-impl Collidable {
+impl CollidableBox {
     pub fn new(dim: Vec3) -> Self {
         Self { dim }
     }
@@ -17,7 +17,7 @@ impl Collidable {
     }
 }
 
-impl Default for Collidable {
+impl Default for CollidableBox {
     fn default() -> Self {
         Self::new(Vec3::new(1., 1., 1.))
     }

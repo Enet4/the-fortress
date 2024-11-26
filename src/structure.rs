@@ -7,7 +7,7 @@ use bevy_mod_picking::{
     PickableBundle,
 };
 
-use crate::live::{callback_on_click, collision::Collidable, OnLive};
+use crate::live::{callback_on_click, collision::CollidableBox, OnLive};
 
 fn new_wall(
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -28,7 +28,7 @@ fn new_wall(
             material,
             ..Default::default()
         },
-        Collidable::new(Vec3::new(0.1, dim.x, dim.y)),
+        CollidableBox::new(Vec3::new(0.1, dim.x, dim.y)),
         PickableBundle::default(),
         On::<Pointer<Click>>::run(callback_on_click),
     )
@@ -80,7 +80,7 @@ pub fn spawn_corridor<'a>(
                 material: floor_material_handle,
                 ..Default::default()
             },
-            Collidable::new(Vec3::new(dim.x, 0.25, dim.z)),
+            CollidableBox::new(Vec3::new(dim.x, 0.25, dim.z)),
             PickableBundle::default(),
             On::<Pointer<Click>>::run(callback_on_click),
         ));
@@ -98,7 +98,7 @@ pub fn spawn_corridor<'a>(
                 material: ceil_material_handle,
                 ..Default::default()
             },
-            Collidable::new(Vec3::new(dim.x, 0.125, dim.z)),
+            CollidableBox::new(Vec3::new(dim.x, 0.125, dim.z)),
             PickableBundle::default(),
             On::<Pointer<Click>>::run(callback_on_click),
         ));
@@ -174,7 +174,7 @@ pub fn spawn_fork<'a>(
                 material: floor_material_handle,
                 ..Default::default()
             },
-            Collidable::new(Vec3::new(dim.x * 2., 0.125, dim.z)),
+            CollidableBox::new(Vec3::new(dim.x * 2., 0.125, dim.z)),
             PickableBundle::default(),
             On::<Pointer<Click>>::run(callback_on_click),
         ));
@@ -192,7 +192,7 @@ pub fn spawn_fork<'a>(
                 material: ceil_material_handle,
                 ..Default::default()
             },
-            Collidable::new(Vec3::new(dim.x, 0.25, dim.z)),
+            CollidableBox::new(Vec3::new(dim.x, 0.25, dim.z)),
             PickableBundle::default(),
             On::<Pointer<Click>>::run(callback_on_click),
         ));

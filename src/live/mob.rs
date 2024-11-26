@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    collision::Collidable,
+    collision::CollidableBox,
     icon::{spawn_target_icon, HasIcon},
     phase::PhaseTrigger,
     player::Player,
@@ -174,7 +174,7 @@ pub struct MobBundle {
     #[bundle()]
     pub pbr: PbrBundle,
     pub mob: Mob,
-    pub collidable: Collidable,
+    pub collidable: CollidableBox,
     pub target: Target,
     pub health: Health,
     pub pickable: PickableBundle,
@@ -225,7 +225,7 @@ pub fn spawn_mob(cmd: &mut Commands, assets: &MobAssets, position: Vec3, target:
                 ..default()
             },
             mob: Mob,
-            collidable: Collidable::new(Vec3::new(TARGET_SIZE - 0.2, TARGET_SIZE - 0.2, 0.5)),
+            collidable: CollidableBox::new(Vec3::new(TARGET_SIZE - 0.2, TARGET_SIZE - 0.2, 0.5)),
             target,
             health: Health { value: 1., max: 1. },
             pickable: PickableBundle {

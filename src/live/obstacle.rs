@@ -5,14 +5,14 @@ use bevy_mod_picking::prelude::*;
 use crate::effect::ScalesUp;
 
 use super::OnLive;
-use super::{callback_on_click, collision::Collidable, Target};
+use super::{callback_on_click, collision::CollidableBox, Target};
 
 #[derive(Bundle)]
 pub struct SimpleTargetBundle {
     #[bundle()]
     pub pbr: PbrBundle,
     pub pickable: PickableBundle,
-    pub collidable: Collidable,
+    pub collidable: CollidableBox,
     pub target: Target,
     pub on_click: On<Pointer<Click>>,
     pub scales_up: ScalesUp,
@@ -20,7 +20,7 @@ pub struct SimpleTargetBundle {
 }
 
 impl SimpleTargetBundle {
-    pub fn new(pbr: PbrBundle, collidable: Collidable, target: Target) -> Self {
+    pub fn new(pbr: PbrBundle, collidable: CollidableBox, target: Target) -> Self {
         Self {
             pbr,
             pickable: PickableBundle {
@@ -56,6 +56,6 @@ impl SimpleTargetBundle {
             ..default()
         };
 
-        Self::new(pbr, Collidable { dim }, target)
+        Self::new(pbr, CollidableBox { dim }, target)
     }
 }

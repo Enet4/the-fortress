@@ -6,7 +6,7 @@ use bevy::{
 use crate::{effect::Velocity, logic::Num};
 
 use super::{
-    collision::Collidable,
+    collision::CollidableBox,
     weapon::{PlayerAttack, PlayerWeapon},
     OnLive, Target,
 };
@@ -89,7 +89,7 @@ pub fn spawn_projectile(
 pub fn projectile_collision(
     mut cmd: Commands,
     projectile_q: Query<(Entity, &Transform, &Projectile)>,
-    collidable_q: Query<(Entity, &Collidable, &Transform, Option<&Target>)>,
+    collidable_q: Query<(Entity, &CollidableBox, &Transform, Option<&Target>)>,
     mut attack_events: EventWriter<PlayerAttack>,
 ) {
     for (p_entity, p_transform, projectile) in projectile_q.iter() {
@@ -106,6 +106,9 @@ pub fn projectile_collision(
                 // despawn the projectile (and respective light)
                 // TODO particles
                 cmd.entity(p_entity).despawn_recursive();
+
+                // should not hit any other target
+                break;
             }
         }
     }
