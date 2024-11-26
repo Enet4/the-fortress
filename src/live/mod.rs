@@ -147,12 +147,12 @@ impl Plugin for LiveActionPlugin {
             .add_systems(
                 FixedUpdate,
                 (
+                    // this one needs to run after systems which despawn TargetDestroyed events
+                    (process_target_destroyed, process_attacks).chain(),
                     projectile::projectile_collision,
-                    process_attacks,
-                    process_target_destroyed,
+                    mob::destroy_spawner_when_done,
                     process_new_target,
                     mob::spawn_mobs,
-                    mob::destroy_spawner_when_done,
                     process_damage_player,
                     (process_live_time, update_timer_text).chain(),
                     weapon::process_weapon_change,
@@ -673,11 +673,16 @@ pub fn process_target_destroyed(
         // count the number of targets still on scene
         let num_targets = target_q.iter().count();
         if num_targets > 0 {
+            println!("Should not progress yet: {} targets left", num_targets);
             continue;
         }
         // and count the number of mob spawners still on scene
         let num_mobspawners = active_mob_spawners_q.iter().count();
         if num_mobspawners > 0 {
+            println!(
+                "Should not progress yet: {} mob spawners left",
+                num_mobspawners
+            );
             continue;
         }
 

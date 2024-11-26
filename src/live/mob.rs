@@ -44,7 +44,11 @@ pub struct Randomness {
 }
 
 impl MobSpawner {
-    pub fn new(count: u32, spawn_interval: f32, target_options: Vec<Num>) -> Self {
+    pub fn new<I>(count: u32, spawn_interval: f32, target_options: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Into<Num>,
+    {
         MobSpawner::new_with_target_rule(
             count,
             spawn_interval,
@@ -53,16 +57,20 @@ impl MobSpawner {
         )
     }
 
-    pub fn new_with_target_rule(
+    pub fn new_with_target_rule<I>(
         count: u32,
         spawn_interval: f32,
-        target_options: Vec<Num>,
+        target_options: I,
         target_rule: TargetRule,
-    ) -> Self {
+    ) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Into<Num>,
+    {
         MobSpawner {
             count,
             spawn_interval,
-            target_options,
+            target_options: target_options.into_iter().map(Into::into).collect(),
             target_rule,
             active: false,
             last_spawn: 0.,
@@ -132,9 +140,9 @@ pub fn spawn_mobs(
         if relative_elapsed >= spawner.spawn_interval {
             println!("Spawning mob");
             // spawn a mob
-            // TODO use an RNG to pseudorandomize the position
-            let rel_x = (random.rng.next_range(0..9_u32) as f32 - 4.5) / 2.;
-            let rel_y = random.rng.next_range(0..4_u32) as f32 - 2.;
+            // use an RNG to pseudorandomize the position
+            let rel_x = (random.rng.next_range(0..12_u32) as f32 - 6.) / 2.;
+            let rel_y = random.rng.next_range(0..5_u32) as f32 - 2.5;
             let rel_z = if spawner.count % 2 == 0 {
                 MOB_SPAWN_Z_OFFSET + (spawner.count / 2) as f32 * 0.2
             } else {

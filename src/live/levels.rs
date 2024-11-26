@@ -152,18 +152,38 @@ impl Default for LevelSpec {
     }
 }
 
+macro_rules! frac {
+    ($a: literal / $b: literal) => {
+        Num::new_raw($a, $b)
+    };
+    ($a: literal, $b: literal) => {
+        Num::new_raw($a, $b)
+    };
+}
+
 impl LevelSpec {
     fn level(level: LevelId) -> Self {
         match level {
             // starting level
             LevelId { stage: 0, .. } => Self::level_0(),
-            LevelId { stage: 1, .. } => Self::level_carp(),
-            level @ LevelId { stage: 2, .. } => todo!("Unspecified level {level}"),
-            level @ LevelId { stage: 3, .. } => todo!("Unspecified level {level}"),
-            level @ LevelId { stage: 4, .. } => todo!("Unspecified level {level}"),
-            level @ LevelId { stage: 5, .. } => todo!("Unspecified level {level}"),
-            level @ LevelId { stage: 6, .. } => todo!("Unspecified level {level}"),
-            level @ LevelId { stage: 7, .. } => todo!("Unspecified level {level}"),
+            // stage 1
+            LevelId { stage: 1, .. } => Self::level_1(level),
+            // stage 2 x<
+            level @ LevelId {
+                stage: 2,
+                decisions,
+            } if (decisions >> 1) == 0 => Self::level_2l(level),
+            // stage 2 x>
+            level @ LevelId { stage: 2, .. } => Self::level_2r(level),
+            // stage 3
+            LevelId { stage: 3, .. } => Self::level_3(level),
+            // TODO other levels
+            level @ LevelId { stage: 4, .. } => Self::level_carp(),
+            level @ LevelId { stage: 5, .. } => Self::level_carp(),
+            level @ LevelId { stage: 6, .. } => Self::level_carp(),
+            // fallback for most levels after the final stage
+            // (this will depend on how many levels I mange to build...)
+            level @ LevelId { stage: 7, .. } => Self::ending_circle(),
             _ => unreachable!("Unexpected level {level}"),
         }
     }
@@ -212,13 +232,13 @@ impl LevelSpec {
                 // add a mob spawner that spawns a few mobs
                 (
                     0.62,
-                    MobSpawner::new(5, 2., vec![2.into()]),
+                    MobSpawner::new(5, 2., [2]),
                 ).into(),
 
                 // add a mob spawner that spawns a single mob
                 (
                     0.7,
-                    MobSpawner::new(1, 2., vec![6.into()]),
+                    MobSpawner::new(1, 2., [6]),
                 ).into(),
 
                 // an interlude just before the fork
@@ -233,6 +253,309 @@ impl LevelSpec {
                     ]),
                 ).into()
             ],
+        }
+    }
+
+    fn level_1(level: LevelId) -> Self {
+        LevelSpec {
+            corridor_length: 200.,
+            rng_seed: 0x3333_3333,
+            things: vec![
+                // another message
+                (
+                    0.1,
+                    InterludeSpec::from_sequence([
+                        (include_str!("./interludes/3_1.txt"), None),
+                    ])
+                ).into(),
+
+                // give two cubes to the player
+                (
+                    0.15,
+                    ThingKind::WeaponCube { x: 1., num: 2.into() }
+                ).into(),
+                (
+                    0.2,
+                    ThingKind::WeaponCube { x: -1., num: 3.into() }
+                ).into(),
+
+                // mob spawner with 2s and 3s
+                (
+                    0.4,
+                    MobSpawner::new(10, 2., [2, 3]),
+                ).into(),
+
+                // a bit more difficult
+                (
+                    0.65,
+                    MobSpawner::new(16, 1.75, [2, 3, 4, 6, 9]),
+                ).into(),
+
+                // another interlude just before the fork
+                (
+                    0.95,
+                    InterludeSpec::from_sequence([
+                        (
+                            "You see another fork up ahead. Given the complete lack of guidance or clues, you feel like you will have to search every path until you find the wizard.",
+                            None,
+                        ),
+                        (if level.decisions == 0 {
+                            "You went left before. Which way should you go this time?"
+                        } else {
+                            "You went right before. Which way should you go this time?"
+                        }, None),
+                    ]),
+                ).into()
+            ],
+        }
+    }
+
+    fn level_2l(level: LevelId) -> Self {
+        LevelSpec {
+            corridor_length: 180.,
+            rng_seed: 0x3333_3333,
+            things: vec![
+                // give three cubes to the player
+                (
+                    0.09,
+                    ThingKind::WeaponCube {
+                        x: 1.,
+                        num: 3.into(),
+                    },
+                )
+                    .into(),
+                (
+                    0.1,
+                    ThingKind::WeaponCube {
+                        x: -1.,
+                        num: 5.into(),
+                    },
+                )
+                    .into(),
+                (
+                    0.12,
+                    ThingKind::WeaponCube {
+                        x: -1.,
+                        num: 7.into(),
+                    },
+                )
+                    .into(),
+                // one mob spawner after another
+                (
+                    0.36,
+                    MobSpawner::new(10, 1.75, [10, 7, 25, 28, 39, 49, 50, 56]),
+                )
+                    .into(),
+                (
+                    0.4,
+                    MobSpawner::new(15, 1.75, [3, 9, 14, 20, 21, 24, 39, 45, 63]),
+                )
+                    .into(),
+                // add cube 2
+                (
+                    0.6,
+                    ThingKind::WeaponCube {
+                        x: 0.,
+                        num: 2.into(),
+                    },
+                )
+                    .into(),
+                // use two mob spawners
+                (0.75, MobSpawner::new(10, 2.5, [2, 3, 4, 6, 9, 12])).into(),
+                (
+                    0.75,
+                    MobSpawner::new(10, 1.75, [21, 24, 32, 12, 45, 49, 50, 56, 91]),
+                )
+                    .into(),
+            ],
+        }
+    }
+
+    fn level_2r(level: LevelId) -> Self {
+        LevelSpec {
+            corridor_length: 180.,
+            rng_seed: 0x3434_3434,
+            things: vec![
+                // give three cubes to the player
+                (
+                    0.09,
+                    ThingKind::WeaponCube {
+                        x: 1.,
+                        num: 4.into(),
+                    },
+                )
+                    .into(),
+                (
+                    0.1,
+                    ThingKind::WeaponCube {
+                        x: 0.,
+                        num: 6.into(),
+                    },
+                )
+                    .into(),
+                (
+                    0.12,
+                    ThingKind::WeaponCube {
+                        x: -1.,
+                        num: 7.into(),
+                    },
+                )
+                    .into(),
+                // one mob spawner after another
+                (
+                    0.36,
+                    MobSpawner::new(10, 1.75, [8, 7, 16, 24, 36, 49, 56, 80]),
+                )
+                    .into(),
+                (
+                    0.4,
+                    MobSpawner::new(
+                        15,
+                        1.75,
+                        [6, 12, 14, 20, 28, 32, 39, 45, 54, 63, 64, 70, 66],
+                    ),
+                )
+                    .into(),
+                // add cube 11
+                (
+                    0.6,
+                    ThingKind::WeaponCube {
+                        x: 0.,
+                        num: 11.into(),
+                    },
+                )
+                    .into(),
+                // use two mob spawners
+                (0.75, MobSpawner::new(10, 2.5, [6, 7, 8, 11, 16, 60])).into(),
+                (
+                    0.75,
+                    MobSpawner::new(10, 1.75, [12, 21, 24, 32, 36, 49, 55, 56, 64, 121]),
+                )
+                    .into(),
+            ],
+        }
+    }
+
+    fn level_3(level: LevelId) -> Self {
+        // the level where we start having fractions
+        LevelSpec {
+            corridor_length: 180.,
+            rng_seed: 0x3454_4321,
+            things: vec![
+                // spawn a 1/3 cube
+                (
+                    0.1,
+                    ThingKind::WeaponCube {
+                        x: 0.5,
+                        num: frac!(1 / 3),
+                    },
+                )
+                    .into(),
+                // spawn a 1/4 cube
+                (
+                    0.15,
+                    ThingKind::WeaponCube {
+                        x: -0.5,
+                        num: frac!(1 / 4),
+                    },
+                )
+                    .into(),
+                // spawn a mob spawner with equivalent fractions
+                (
+                    0.3,
+                    MobSpawner::new(
+                        20,
+                        1.75,
+                        [
+                            // 1/3
+                            frac!(1 / 3),
+                            frac!(2 / 6),
+                            frac!(6 / 18),
+                            frac!(16 / 48),
+                            // 1/4
+                            frac!(1 / 4),
+                            frac!(4 / 16),
+                            frac!(6 / 24),
+                            frac!(8 / 32),
+                        ],
+                    ),
+                )
+                    .into(),
+                // spawn a 3/4 cube
+                (
+                    0.5,
+                    ThingKind::WeaponCube {
+                        x: 0.5,
+                        num: frac!(3 / 4),
+                    },
+                )
+                    .into(),
+                // two spawners
+                (
+                    0.7,
+                    MobSpawner::new(
+                        12,
+                        2.,
+                        [
+                            // 1/3
+                            frac!(1 / 3),
+                            frac!(6 / 18),
+                            frac!(16 / 48),
+                            frac!(10 / 30),
+                            // 1/4
+                            frac!(1 / 4),
+                            frac!(6 / 24),
+                            frac!(8 / 32),
+                            // 3/4
+                            frac!(3 / 4),
+                            frac!(9 / 12),
+                            frac!(33 / 44),
+                        ],
+                    ),
+                )
+                    .into(),
+                (
+                    0.7,
+                    MobSpawner::new(
+                        14,
+                        1.75,
+                        [
+                            // 1/3
+                            frac!(1 / 3),
+                            frac!(2 / 6),
+                            frac!(4 / 12),
+                            frac!(7 / 21),
+                            // 1/4
+                            frac!(1 / 4),
+                            frac!(4 / 16),
+                            frac!(6 / 24),
+                            frac!(8 / 32),
+                            frac!(10 / 40),
+                            // 3/4
+                            frac!(6 / 8),
+                            frac!(15 / 40),
+                            frac!(21 / 28),
+                        ],
+                    ),
+                )
+                    .into(),
+            ],
+        }
+    }
+
+    fn ending_circle() -> Self {
+        // Ending 1
+        LevelSpec {
+            corridor_length: 1000.,
+            rng_seed: 0,
+            things: vec![(
+                0.,
+                InterludeSpec::from_sequence_and_exit([
+                    (include_str!("interludes/z_circle_1.txt"), None),
+                    (include_str!("interludes/z_circle_2.txt"), None),
+                ]),
+            )
+                .into()],
         }
     }
 

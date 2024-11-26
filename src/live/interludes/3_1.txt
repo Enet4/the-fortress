@@ -1,0 +1,4 @@
+The cube that you once had faded away, but fortunately you spot two new cubes up ahead. However, you can only bind one of them to your staff at a time.
+
+
+(Press the buttons in your HUD or the shortcut numbers on your keyboard to switch between them.)
