@@ -177,13 +177,27 @@ impl LevelSpec {
             level @ LevelId { stage: 2, .. } => Self::level_2r(level),
             // stage 3
             LevelId { stage: 3, .. } => Self::level_3(level),
-            // TODO other levels
-            level @ LevelId { stage: 4, .. } => Self::level_carp(),
-            level @ LevelId { stage: 5, .. } => Self::level_carp(),
-            level @ LevelId { stage: 6, .. } => Self::level_carp(),
+            // stage 4 xxx<
+            level @ LevelId {
+                stage: 4,
+                decisions,
+            } if (decisions >> 3) == 0 => Self::level_4l(level),
+            // stage 4 xxx>
+            level @ LevelId { stage: 4, .. } => Self::level_4r(level),
+
+            // ending 2
+            LevelId {
+                stage: 5,
+                decisions: 0b0000,
+            }
+            | LevelId {
+                stage: 5,
+                decisions: 0b1111,
+            } => Self::ending_bedroom(),
+
             // fallback for most levels after the final stage
             // (this will depend on how many levels I mange to build...)
-            level @ LevelId { stage: 7, .. } => Self::ending_circle(),
+            LevelId { stage: 5, .. } => Self::ending_circle(),
             _ => unreachable!("Unexpected level {level}"),
         }
     }
@@ -492,51 +506,319 @@ impl LevelSpec {
                     },
                 )
                     .into(),
-                // two spawners
+                // a heavier spawners
                 (
                     0.7,
                     MobSpawner::new(
-                        12,
-                        2.,
+                        20,
+                        1.5,
                         [
                             // 1/3
                             frac!(1 / 3),
+                            frac!(2 / 6),
+                            frac!(3 / 9),
+                            frac!(4 / 12),
                             frac!(6 / 18),
+                            frac!(7 / 21),
+                            frac!(9 / 27),
                             frac!(16 / 48),
                             frac!(10 / 30),
                             // 1/4
                             frac!(1 / 4),
                             frac!(6 / 24),
                             frac!(8 / 32),
+                            frac!(9 / 36),
+                            frac!(10 / 40),
+                            frac!(12 / 48),
                             // 3/4
                             frac!(3 / 4),
+                            frac!(6 / 8),
                             frac!(9 / 12),
+                            frac!(12 / 16),
+                            frac!(15 / 20),
                             frac!(33 / 44),
+                            frac!(21 / 28),
+                            frac!(15 / 40),
                         ],
                     ),
                 )
                     .into(),
+            ],
+        }
+    }
+
+    fn level_4l(level: LevelId) -> Self {
+        LevelSpec {
+            corridor_length: 200.,
+            rng_seed: 0x1ab2_4547,
+            things: vec![
+                // spawn 4 fraction cubes
+                (
+                    0.1,
+                    ThingKind::WeaponCube {
+                        x: 1.,
+                        num: frac!(1 / 2),
+                    },
+                )
+                    .into(),
+                (
+                    0.12,
+                    ThingKind::WeaponCube {
+                        x: 0.5,
+                        num: frac!(1 / 5),
+                    },
+                )
+                    .into(),
+                (
+                    0.14,
+                    ThingKind::WeaponCube {
+                        x: 0.,
+                        num: frac!(1 / 7),
+                    },
+                )
+                    .into(),
+                (
+                    0.16,
+                    ThingKind::WeaponCube {
+                        x: -0.5,
+                        num: frac!(1 / 8),
+                    },
+                )
+                    .into(),
+                // spawn a mob spawner with equivalent fractions
+                (
+                    0.3,
+                    MobSpawner::new(
+                        16,
+                        1.5,
+                        [
+                            // 1/2
+                            frac!(1 / 2),
+                            frac!(2 / 4),
+                            frac!(4 / 8),
+                            frac!(6 / 12),
+                            frac!(8 / 16),
+                            frac!(10 / 20),
+                            frac!(16 / 32),
+                            // 1/5
+                            frac!(3 / 15),
+                            frac!(4 / 20),
+                            frac!(5 / 25),
+                            frac!(6 / 30),
+                            frac!(7 / 35),
+                            frac!(8 / 40),
+                            // 1/7
+                            frac!(1 / 7),
+                            frac!(2 / 14),
+                            frac!(3 / 21),
+                            frac!(4 / 28),
+                            frac!(5 / 35),
+                            frac!(6 / 42),
+                            frac!(7 / 49),
+                            frac!(8 / 56),
+                            frac!(9 / 63),
+                            frac!(11 / 77),
+                            // 1/8
+                            frac!(1 / 8),
+                            frac!(2 / 16),
+                            frac!(3 / 24),
+                            frac!(4 / 32),
+                            frac!(5 / 40),
+                            frac!(6 / 48),
+                            frac!(7 / 56),
+                            frac!(8 / 64),
+                            frac!(9 / 72),
+                        ],
+                    ),
+                )
+                    .into(),
+                // spawn a 2 cube
+                (
+                    0.5,
+                    ThingKind::WeaponCube {
+                        x: 0.,
+                        num: 2.into(),
+                    },
+                )
+                    .into(),
+                // mob spawner
                 (
                     0.7,
                     MobSpawner::new(
-                        14,
-                        1.75,
+                        22,
+                        1.5,
+                        [
+                            // 2
+                            frac!(4 / 2),
+                            frac!(12 / 6),
+                            frac!(18 / 9),
+                            frac!(24 / 12),
+                            frac!(16 / 4),
+                            frac!(117, 1),
+                            // 1/5
+                            frac!(5 / 25),
+                            frac!(6 / 30),
+                            frac!(7 / 35),
+                            frac!(8 / 40),
+                            frac!(10 / 50),
+                            // 1/7
+                            frac!(1 / 7),
+                            frac!(3 / 21),
+                            frac!(4 / 28),
+                            frac!(6 / 42),
+                            frac!(8 / 56),
+                            // 1/8
+                            frac!(1 / 8),
+                            frac!(2 / 16),
+                            frac!(3 / 24),
+                            frac!(5 / 40),
+                            frac!(6 / 48),
+                            frac!(7 / 56),
+                            frac!(8 / 64),
+                        ],
+                    ),
+                )
+                    .into(),
+            ],
+        }
+    }
+
+    fn level_4r(level: LevelId) -> Self {
+        LevelSpec {
+            corridor_length: 200.,
+            rng_seed: 0xfabf_551d,
+            things: vec![
+                // spawn 4 fraction cubes
+                (
+                    0.1,
+                    ThingKind::WeaponCube {
+                        x: 1.,
+                        num: frac!(1 / 3),
+                    },
+                )
+                    .into(),
+                (
+                    0.12,
+                    ThingKind::WeaponCube {
+                        x: 0.5,
+                        num: frac!(1 / 4),
+                    },
+                )
+                    .into(),
+                (
+                    0.14,
+                    ThingKind::WeaponCube {
+                        x: 0.,
+                        num: frac!(1 / 5),
+                    },
+                )
+                    .into(),
+                (
+                    0.16,
+                    ThingKind::WeaponCube {
+                        x: -0.5,
+                        num: frac!(1 / 6),
+                    },
+                )
+                    .into(),
+                // spawn a mob spawner with equivalent fractions
+                (
+                    0.3,
+                    MobSpawner::new(
+                        16,
+                        1.5,
                         [
                             // 1/3
                             frac!(1 / 3),
                             frac!(2 / 6),
+                            frac!(3 / 9),
                             frac!(4 / 12),
+                            frac!(5 / 15),
+                            frac!(6 / 18),
                             frac!(7 / 21),
+                            frac!(8 / 24),
                             // 1/4
                             frac!(1 / 4),
+                            frac!(2 / 8),
+                            frac!(3 / 12),
                             frac!(4 / 16),
+                            frac!(5 / 20),
                             frac!(6 / 24),
+                            frac!(7 / 28),
                             frac!(8 / 32),
-                            frac!(10 / 40),
-                            // 3/4
-                            frac!(6 / 8),
-                            frac!(15 / 40),
-                            frac!(21 / 28),
+                            // 1/5
+                            frac!(1 / 5),
+                            frac!(2 / 10),
+                            frac!(3 / 15),
+                            frac!(4 / 20),
+                            frac!(5 / 25),
+                            frac!(6 / 30),
+                            frac!(7 / 35),
+                            frac!(8 / 40),
+                            // 1/9
+                            frac!(1 / 9),
+                            frac!(2 / 18),
+                            frac!(3 / 27),
+                            frac!(4 / 36),
+                            frac!(5 / 45),
+                            frac!(6 / 54),
+                            frac!(7 / 63),
+                            frac!(8 / 72),
+                        ],
+                    ),
+                )
+                    .into(),
+                // spawn a 2 cube
+                (
+                    0.5,
+                    ThingKind::WeaponCube {
+                        x: 0.,
+                        num: 2.into(),
+                    },
+                )
+                    .into(),
+                // mob spawner
+                (
+                    0.7,
+                    MobSpawner::new(
+                        22,
+                        1.5,
+                        [
+                            // 2
+                            frac!(4 / 2),
+                            frac!(12 / 6),
+                            frac!(18 / 9),
+                            frac!(24 / 12),
+                            frac!(16 / 4),
+                            frac!(216, 1),
+                            // 1/3
+                            frac!(1 / 3),
+                            frac!(2 / 6),
+                            frac!(3 / 9),
+                            frac!(4 / 12),
+                            frac!(5 / 15),
+                            frac!(6 / 18),
+                            frac!(7 / 21),
+                            frac!(8 / 24),
+                            // 1/4
+                            frac!(1 / 4),
+                            frac!(2 / 8),
+                            frac!(3 / 12),
+                            frac!(4 / 16),
+                            frac!(5 / 20),
+                            // 1/5
+                            frac!(2 / 10),
+                            frac!(3 / 15),
+                            frac!(4 / 20),
+                            frac!(9 / 45),
+                            frac!(10 / 50),
+                            // 1/9
+                            frac!(1 / 9),
+                            frac!(2 / 18),
+                            frac!(3 / 27),
+                            frac!(9 / 81),
+                            frac!(10 / 90),
+                            frac!(11 / 99),
                         ],
                     ),
                 )
@@ -556,6 +838,25 @@ impl LevelSpec {
                     (include_str!("interludes/z_circle_1.txt"), None),
                     (include_str!("interludes/z_circle_2.txt"), None),
                 ]),
+            )
+                .into()],
+        }
+    }
+
+    fn ending_bedroom() -> Self {
+        // Ending 2
+        LevelSpec {
+            corridor_length: 1000.,
+            rng_seed: 0,
+            things: vec![(
+                0.,
+                InterludeSpec::from_sequence_and_exit(
+                    ([
+                        (include_str!("interludes/z_bedroom_1.txt"), None),
+                        (include_str!("interludes/z_bedroom_2.txt"), None),
+                        (include_str!("interludes/z_bedroom_3.txt"), None),
+                    ]),
+                ),
             )
                 .into()],
         }
