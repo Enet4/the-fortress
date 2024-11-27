@@ -75,7 +75,7 @@ impl Plugin for LiveActionPlugin {
             // live game setup
             .add_systems(
                 OnEnter(AppState::Live),
-                (scene::setup_scene, setup_ui, start_running).chain(),
+                (reset_game, scene::setup_scene, setup_ui, start_running).chain(),
             )
             // partial live game take-down when exiting Running and entering Loading
             .add_systems(
@@ -97,13 +97,16 @@ impl Plugin for LiveActionPlugin {
                     exited: LiveState::Defeat,
                     entered: LiveState::LoadingLevel,
                 },
-                despawn_all_at::<OnLive>,
+                (
+                    despawn_all_at::<OnLive>,
+                    scene::setup_scene,
+                    setup_ui,
+                    start_running,
+                )
+                    .chain(),
             )
             // live game take-down
-            .add_systems(
-                OnExit(AppState::Live),
-                (despawn_all_at::<OnLive>, reset_game),
-            )
+            .add_systems(OnExit(AppState::Live), despawn_all_at::<OnLive>)
             .add_systems(OnEnter(LiveState::Defeat), enter_defeat)
             // systems which should function regardless of the game state
             .add_systems(Update, pause_on_esc.run_if(in_state(AppState::Live)))
@@ -435,18 +438,20 @@ fn setup_ui(mut cmd: Commands, default_font: Res<DefaultFont>, game_settings: Re
                         TextStyle {
                             color: Color::WHITE,
                             font: font.clone(),
-                            font_size: 24.,
+                            font_size: 26.,
                             ..default()
                         },
                     ),
                     focus_policy: FocusPolicy::Pass,
                     style: Style {
-                        left: Val::Px(4.),
-                        top: Val::Px(4.),
-                        bottom: Val::Px(4.),
-                        right: Val::Auto,
+                        margin: UiRect {
+                            left: Val::Px(75.),
+                            bottom: Val::Px(4.),
+                            ..default()
+                        },
                         ..default()
                     },
+                    z_index: ZIndex::Global(11),
                     ..default()
                 },
             ));
