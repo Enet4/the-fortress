@@ -55,20 +55,20 @@ pub fn test_attack_on(target: &Target, attack: Num) -> AttackTest {
 /// Test an attack to see what effect it has on the target.
 pub fn test_attack(rule: TargetRule, attack: Num, target: Num) -> AttackTest {
     match rule {
-        TargetRule::Equal => {
-            if attack == target {
+        TargetRule::Factorize => {
+            if target == Num::ONE || target == attack {
                 AttackTest::Effective(None)
+            } else if !attack.reduced().is_integer() {
+                AttackTest::Failed
+            } else if target % attack == Num::ZERO {
+                AttackTest::Effective(Some(target / attack))
             } else {
                 AttackTest::Failed
             }
         }
-        TargetRule::Factorize => {
-            if target == Num::ONE || target == attack {
+        TargetRule::Equal => {
+            if attack == target {
                 AttackTest::Effective(None)
-            } else if !attack.is_integer() {
-                AttackTest::Failed
-            } else if target % attack == Num::ZERO {
-                AttackTest::Effective(Some(target / attack))
             } else {
                 AttackTest::Failed
             }
