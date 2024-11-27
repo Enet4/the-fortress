@@ -138,6 +138,7 @@ pub struct TriggerWeapon {
 pub fn trigger_weapon(
     mut cmd: Commands,
     projectile_assets: Res<ProjectileAssets>,
+    audio_handles: Res<AudioHandles>,
     mut trigger_weapon_events: EventReader<TriggerWeapon>,
     mut weapon_q: Query<&PlayerWeapon, With<WeaponSelected>>,
     mut player_q: Query<(&GlobalTransform, &mut AttackCooldown), With<Player>>,
@@ -156,7 +157,8 @@ pub fn trigger_weapon(
 
         let player_position = player_transform.translation();
 
-        // TODO play sound effect
+        // play sound effect
+        audio_handles.play_fireball(&mut cmd);
 
         let direction = trigger_weapon.target_pos - player_position;
         let direction = direction.normalize();

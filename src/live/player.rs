@@ -3,6 +3,7 @@
 use bevy::{ecs::system::EntityCommands, prelude::*};
 
 use crate::{
+    assets::AudioHandles,
     cheat::Cheats,
     effect::{Collapsing, StaysOnFloor, TimeToLive, Velocity},
     live::Target,
@@ -106,6 +107,7 @@ pub struct TargetDestroyed;
 /// system for processing player attacks
 pub fn process_attacks(
     mut cmd: Commands,
+    audio_sources: Res<AudioHandles>,
     mut events: EventReader<PlayerAttack>,
     mut damage_player_events: EventWriter<DamagePlayer>,
     mut target_destroyed_events: EventWriter<TargetDestroyed>,
@@ -131,9 +133,12 @@ pub fn process_attacks(
                         // add the effects to destroy the target
                         cmd.entity(*entity).remove::<Target>().insert((
                             Collapsing::default(),
-                            Velocity(Vec3::new(0., 12., 6.)),
+                            Velocity(Vec3::new(0., 8., 6.)),
                             TimeToLive(0.5),
                         ));
+
+                        audio_sources.play_hit02(&mut cmd);
+
                         target_destroyed_events.send(TargetDestroyed);
                     } else {
                         // update target with its new number
@@ -145,7 +150,7 @@ pub fn process_attacks(
                     // with no health, the target is destroyed
                     cmd.entity(*entity).remove::<Target>().insert((
                         Collapsing::default(),
-                        Velocity(Vec3::new(0., 12., 6.)),
+                        Velocity(Vec3::new(0., 8., 6.)),
                         TimeToLive(0.5),
                     ));
 
@@ -203,7 +208,7 @@ pub fn process_damage_player(
         if player_health.value <= 0. {
             // player is dead
             cmd.entity(player_entity).insert((
-                Velocity(Vec3::new(0., 3., -2.)),
+                Velocity(Vec3::new(0., 4., 3.)),
                 Collapsing::default(),
                 StaysOnFloor,
             ));
