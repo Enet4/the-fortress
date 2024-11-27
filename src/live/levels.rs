@@ -327,7 +327,7 @@ impl LevelSpec {
                 (
                     0.1,
                     ThingKind::WeaponCube {
-                        x: -1.,
+                        x: 0.,
                         num: 5.into(),
                     },
                 )
@@ -360,11 +360,14 @@ impl LevelSpec {
                     },
                 )
                     .into(),
-                // use two mob spawners
-                (0.75, MobSpawner::new(10, 2.5, [2, 3, 4, 6, 9, 12])).into(),
+                // a stronger mob spawner
                 (
                     0.75,
-                    MobSpawner::new(10, 1.75, [21, 24, 32, 12, 45, 49, 50, 56, 91]),
+                    MobSpawner::new(
+                        24,
+                        1.5,
+                        [2, 3, 4, 5, 6, 9, 12, 21, 24, 32, 12, 45, 49, 50, 55, 56, 91],
+                    ),
                 )
                     .into(),
             ],
@@ -409,11 +412,7 @@ impl LevelSpec {
                     .into(),
                 (
                     0.4,
-                    MobSpawner::new(
-                        15,
-                        1.75,
-                        [6, 12, 14, 20, 28, 32, 39, 45, 54, 63, 64, 70, 66],
-                    ),
+                    MobSpawner::new(15, 1.75, [6, 12, 14, 20, 28, 32, 39, 54, 63, 64, 70, 66]),
                 )
                     .into(),
                 // add cube 11
@@ -425,11 +424,14 @@ impl LevelSpec {
                     },
                 )
                     .into(),
-                // use two mob spawners
-                (0.75, MobSpawner::new(10, 2.5, [6, 7, 8, 11, 16, 60])).into(),
+                // a stronger mob spawner
                 (
                     0.75,
-                    MobSpawner::new(10, 1.75, [12, 21, 24, 32, 36, 49, 55, 56, 64, 121]),
+                    MobSpawner::new(
+                        24,
+                        1.5,
+                        [6, 12, 7, 8, 11, 16, 21, 24, 32, 36, 49, 55, 56, 60, 64, 121],
+                    ),
                 )
                     .into(),
             ],
