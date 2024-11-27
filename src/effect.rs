@@ -90,7 +90,7 @@ pub struct Collapsing {
 pub fn apply_collapse(time: Res<Time>, mut q: Query<(&mut Velocity, &mut Collapsing)>) {
     let delta = time.delta_seconds();
     for (mut velocity, mut collapsing) in q.iter_mut() {
-        collapsing.speed += 168. * delta;
+        collapsing.speed += 154. * delta;
         velocity.0.y -= collapsing.speed * delta;
     }
 }
