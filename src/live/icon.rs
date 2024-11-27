@@ -68,6 +68,13 @@ pub fn update_icon_opacity(
 /// Spawn a node that shows the target number on top of the target
 pub fn spawn_icon(cmd: &mut Commands, entity: Entity, num: Num, color: Color) -> Entity {
     // draw a circle
+    let (icon_size, font_size) = if *num.denom() >= 10 {
+        (52., 28.)
+    } else if *num.denom() > 1 || num >= 100.into() {
+        (48., 28.)
+    } else {
+        (42., 34.)
+    };
     let icon = cmd
         .spawn((
             OnLive,
@@ -77,12 +84,12 @@ pub fn spawn_icon(cmd: &mut Commands, entity: Entity, num: Num, color: Color) ->
                 style: Style {
                     align_self: AlignSelf::Center,
                     margin: UiRect::all(Val::Auto),
-                    width: Val::Px(42.),
-                    height: Val::Px(42.),
+                    width: Val::Px(icon_size),
+                    height: Val::Px(icon_size),
                     ..default()
                 },
                 background_color: BackgroundColor(Color::BLACK),
-                border_radius: BorderRadius::all(Val::Percent(50.)),
+                border_radius: BorderRadius::MAX,
                 focus_policy: FocusPolicy::Pass,
                 z_index: ZIndex::Global(-2),
                 ..default()
@@ -107,7 +114,7 @@ pub fn spawn_icon(cmd: &mut Commands, entity: Entity, num: Num, color: Color) ->
                         num.to_string(),
                         TextStyle {
                             color,
-                            font_size: 36.,
+                            font_size,
                             ..default()
                         },
                     ),
