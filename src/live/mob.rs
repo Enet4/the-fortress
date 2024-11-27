@@ -141,7 +141,7 @@ pub fn spawn_mobs(
             println!("Spawning mob");
             // spawn a mob
             // use an RNG to pseudorandomize the position
-            let rel_x = (random.rng.next_range(0..12_u32) as f32 - 6.) / 2.;
+            let rel_x = (random.rng.next_range(0..14_u32) as f32 - 7.) / 2.;
             let rel_y = random.rng.next_range(0..5_u32) as f32 - 2.5;
             let rel_z = if spawner.count % 2 == 0 {
                 MOB_SPAWN_Z_OFFSET + (spawner.count / 2) as f32 * 0.2
