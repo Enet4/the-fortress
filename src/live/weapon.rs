@@ -328,6 +328,7 @@ pub fn spawn_weapon_cube(
 pub fn process_approach_weapon_cube(
     mut cmd: Commands,
     player_q: Query<&Transform, With<Player>>,
+    audio_handles: Res<AudioHandles>,
     mut postprocess_settings_q: Query<&mut PostProcessSettings>,
     mut weapon_cube_q: Query<(Entity, &Transform, &WeaponCube, &mut Rotating)>,
 ) {
@@ -350,6 +351,9 @@ pub fn process_approach_weapon_cube(
             // remove weapon cube marker
             cmd.entity(entity).remove::<WeaponCube>();
             install_weapon(&mut cmd, weapon_cube.num);
+
+            // play sound
+            audio_handles.play_pickup(&mut cmd);
 
             // add a visual effect
             if let Ok(mut settings) = postprocess_settings_q.get_single_mut() {

@@ -66,13 +66,8 @@ where
         width: Val::Auto,
         min_width: Val::Px(240.),
         border: UiRect::all(Val::Px(2.0)),
-        padding: UiRect {
-            top: Val::Px(10.),
-            bottom: Val::Px(10.),
-            left: Val::Px(20.),
-            right: Val::Px(20.),
-        },
-        margin: UiRect::all(Val::Px(20.)),
+        padding: UiRect::axes(Val::Px(16.), Val::Px(8.)),
+        margin: UiRect::all(Val::Px(14.)),
         ..default()
     });
 
@@ -82,7 +77,7 @@ where
             style,
             background_color: BackgroundColor(Color::BLACK),
             border_color: BorderColor(NORMAL_BUTTON),
-            border_radius: BorderRadius::all(Val::Px(0.)),
+            border_radius: BorderRadius::ZERO,
             ..default()
         },
     );
@@ -105,12 +100,7 @@ where
             )
             .with_justify(JustifyText::Center),
             style: Style {
-                margin: UiRect {
-                    top: Val::Auto,
-                    bottom: Val::Auto,
-                    left: Val::Auto,
-                    right: Val::Auto,
-                },
+                margin: UiRect::all(Val::Auto),
                 ..default()
             },
             ..default()
