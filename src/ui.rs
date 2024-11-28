@@ -1,6 +1,39 @@
 //! Module for various common UI components
 use bevy::{ecs::system::EntityCommands, prelude::*};
 
+/// Resource for the sizes to use in most common UI components.
+#[derive(Debug, Resource)]
+pub struct Sizes {
+    pub button_min_width: f32,
+    pub title_font_size: f32,
+    pub button_font_size: f32,
+    pub interlude_font_size: f32,
+    pub outer_padding: f32,
+}
+
+impl Default for Sizes {
+    fn default() -> Self {
+        Sizes {
+            button_min_width: 240.,
+            title_font_size: 72.,
+            button_font_size: 36.,
+            interlude_font_size: 26.,
+            outer_padding: 14.,
+        }
+    }
+}
+
+impl Sizes {
+    /// Sizes for a smaller screen
+    pub const SMALL: Self = Sizes {
+        button_min_width: 180.,
+        title_font_size: 48.,
+        button_font_size: 24.,
+        interlude_font_size: 18.,
+        outer_padding: 10.,
+    };
+}
+
 #[derive(Debug, Default, Component)]
 pub struct Meter;
 
@@ -52,6 +85,7 @@ const PRESSED_BUTTON: Color = Color::srgb(0.5, 0.5, 0.5);
 
 fn spawn_button_impl<'a, A, G>(
     cmd: &'a mut ChildBuilder<'_>,
+    sizes: &Sizes,
     font: Handle<Font>,
     text: impl Into<String>,
     style: Option<Style>,
@@ -64,7 +98,7 @@ where
 {
     let style = style.unwrap_or_else(|| Style {
         width: Val::Auto,
-        min_width: Val::Px(240.),
+        min_width: Val::Px(sizes.button_min_width),
         border: UiRect::all(Val::Px(2.0)),
         padding: UiRect::axes(Val::Px(16.), Val::Px(8.)),
         margin: UiRect::all(Val::Px(14.)),
@@ -93,7 +127,7 @@ where
                 text,
                 TextStyle {
                     font,
-                    font_size: 36.,
+                    font_size: sizes.button_font_size,
                     color: NORMAL_BUTTON,
                     ..default()
                 },
@@ -111,6 +145,7 @@ where
 
 pub fn spawn_button_with_style<'a, A>(
     cmd: &'a mut ChildBuilder<'_>,
+    sizes: &Sizes,
     font: Handle<Font>,
     text: impl Into<String>,
     style: Style,
@@ -119,11 +154,12 @@ pub fn spawn_button_with_style<'a, A>(
 where
     A: Component,
 {
-    spawn_button_impl(cmd, font, text, Some(style), None::<Button>, action)
+    spawn_button_impl(cmd, sizes, font, text, Some(style), None::<Button>, action)
 }
 
 pub fn spawn_button_in_group_with_style<'a, A, G>(
     cmd: &'a mut ChildBuilder<'_>,
+    sizes: &Sizes,
     font: Handle<Font>,
     text: impl Into<String>,
     style: Style,
@@ -134,11 +170,12 @@ where
     A: Component,
     G: Component,
 {
-    spawn_button_impl(cmd, font, text, Some(style), Some(group), action)
+    spawn_button_impl(cmd, sizes, font, text, Some(style), Some(group), action)
 }
 
 pub fn spawn_button_in_group<'a, A, G>(
     cmd: &'a mut ChildBuilder<'_>,
+    sizes: &Sizes,
     font: Handle<Font>,
     text: impl Into<String>,
     group: G,
@@ -148,13 +185,14 @@ where
     A: Component,
     G: Component,
 {
-    spawn_button_impl(cmd, font, text, None, Some(group), action)
+    spawn_button_impl(cmd, sizes, font, text, None, Some(group), action)
 }
 
 /// Spawn a button, no group, default styles
 #[inline]
 pub fn spawn_button<'a, A>(
     cmd: &'a mut ChildBuilder<'_>,
+    sizes: &Sizes,
     font: Handle<Font>,
     text: impl Into<String>,
     action: A,
@@ -162,7 +200,7 @@ pub fn spawn_button<'a, A>(
 where
     A: Component,
 {
-    spawn_button_impl(cmd, font, text, None, None::<Button>, action)
+    spawn_button_impl(cmd, sizes, font, text, None, None::<Button>, action)
 }
 
 #[derive(Debug, Component)]

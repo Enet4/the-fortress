@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     assets::{AudioHandles, DefaultFont},
     despawn_all_at,
-    ui::{button_system, spawn_button},
+    ui::{button_system, spawn_button, Sizes},
     AppState, CameraMarker, GameSettings,
 };
 
@@ -66,6 +66,7 @@ struct MenuScreen;
 fn menu_setup(
     mut cmd: Commands,
     default_font: Res<DefaultFont>,
+    sizes: Res<Sizes>,
     mut next_state: ResMut<NextState<MenuState>>,
 ) {
     let font = &default_font.0;
@@ -98,7 +99,7 @@ fn menu_setup(
             text: Text::from_section(
                 "The Fortress",
                 TextStyle {
-                    font_size: 52.,
+                    font_size: sizes.title_font_size + 16.,
                     font: font.clone(),
                     ..default()
                 },
@@ -122,7 +123,7 @@ fn menu_setup(
 pub struct OnMainMenu;
 
 /// system to spawn the main menu UI
-pub fn main_menu_setup(mut cmd: Commands, default_font: Res<DefaultFont>) {
+pub fn main_menu_setup(mut cmd: Commands, default_font: Res<DefaultFont>, sizes: Res<Sizes>) {
     // division for main buttons
     cmd.spawn((
         OnMainMenu,
@@ -146,11 +147,17 @@ pub fn main_menu_setup(mut cmd: Commands, default_font: Res<DefaultFont>) {
     .with_children(|cmd| {
         let font = &default_font.0;
         // button to start the game
-        spawn_button(cmd, font.clone(), "Start", MenuButtonAction::Start);
+        spawn_button(cmd, &sizes, font.clone(), "Start", MenuButtonAction::Start);
         // open options
-        spawn_button(cmd, font.clone(), "Settings", MenuButtonAction::Settings);
+        spawn_button(
+            cmd,
+            &sizes,
+            font.clone(),
+            "Settings",
+            MenuButtonAction::Settings,
+        );
         // button to exit the game
-        spawn_button(cmd, font.clone(), "Exit", MenuButtonAction::Exit);
+        spawn_button(cmd, &sizes, font.clone(), "Exit", MenuButtonAction::Exit);
     });
 }
 
@@ -161,6 +168,7 @@ pub struct OnSettingsMenu;
 pub fn settings_menu_setup(
     mut cmd: Commands,
     default_font: Res<DefaultFont>,
+    sizes: Res<Sizes>,
     game_settings: Res<GameSettings>,
     audio_handles: Res<AudioHandles>,
 ) {
@@ -191,7 +199,13 @@ pub fn settings_menu_setup(
         } else {
             "Show Timer: OFF"
         };
-        spawn_button(cmd, font.clone(), timer_msg, MenuButtonAction::ToggleTimer);
+        spawn_button(
+            cmd,
+            &sizes,
+            font.clone(),
+            timer_msg,
+            MenuButtonAction::ToggleTimer,
+        );
 
         let interludes_msg = if game_settings.skip_interludes {
             "Skip Interludes: ON"
@@ -200,6 +214,7 @@ pub fn settings_menu_setup(
         };
         spawn_button(
             cmd,
+            &sizes,
             font.clone(),
             interludes_msg,
             MenuButtonAction::ToggleInterludes,
@@ -210,8 +225,20 @@ pub fn settings_menu_setup(
         } else {
             "Sound: OFF"
         };
-        spawn_button(cmd, font.clone(), sound_msg, MenuButtonAction::ToggleSound);
-        spawn_button(cmd, font.clone(), "Back", MenuButtonAction::BackToMainMenu);
+        spawn_button(
+            cmd,
+            &sizes,
+            font.clone(),
+            sound_msg,
+            MenuButtonAction::ToggleSound,
+        );
+        spawn_button(
+            cmd,
+            &sizes,
+            font.clone(),
+            "Back",
+            MenuButtonAction::BackToMainMenu,
+        );
     });
 }
 

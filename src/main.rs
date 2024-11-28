@@ -2,13 +2,14 @@ use assets::{AudioHandles, DefaultFont, TextureHandles};
 use bevy::{
     asset::AssetMetaCheck,
     prelude::*,
-    window::{WindowMode, WindowResolution},
+    window::{WindowMode, WindowResized, WindowResolution},
 };
 use bevy_mod_picking::DefaultPickingPlugins;
 use cheat::{Cheats, TextBuffer};
 use live::LiveActionPlugin;
 use menu::MenuPlugin;
 use postprocess::PostProcessPlugin;
+use ui::Sizes;
 
 mod assets;
 mod cheat;
@@ -85,6 +86,8 @@ fn main() {
             MenuPlugin,
             DefaultPickingPlugins,
         ))
+        // startup systems
+        .add_systems(Startup, init_ui_sizes)
         // systems which apply anywhere in the game
         .add_systems(
             Update,
@@ -94,11 +97,13 @@ fn main() {
                 postprocess::oscillate_dithering,
                 postprocess::fadeout_dithering,
                 cheat::cheat_input,
+                update_ui_sizes_on_resize,
             ),
         )
         .add_systems(PostUpdate, (effect::apply_glimmer,))
         // add resources which are used globally
         .init_resource::<DefaultFont>()
+        .init_resource::<Sizes>()
         .init_resource::<GameSettings>()
         .init_resource::<Cheats>()
         .init_resource::<TextBuffer>()
@@ -113,5 +118,34 @@ fn main() {
 pub fn despawn_all_at<T: Component>(mut cmd: Commands, query: Query<Entity, With<T>>) {
     for entity in query.iter() {
         cmd.entity(entity).despawn_recursive();
+    }
+}
+
+/// Startup system to set up the UI sizes based on the window size.
+/// Should also be called when the window is resized.
+fn init_ui_sizes(mut sizes: ResMut<Sizes>, window_q: Query<&Window>) {
+    let Ok(window) = window_q.get_single() else {
+        return;
+    };
+
+    if window.width() < 600. || window.height() < 480. {
+        *sizes = Sizes::SMALL;
+    } else {
+        *sizes = Sizes::default();
+    }
+}
+
+/// Startup system to set up the UI sizes based on the window size.
+/// Should also be called when the window is resized.
+fn update_ui_sizes_on_resize(
+    mut sizes: ResMut<Sizes>,
+    mut resize_reader: EventReader<WindowResized>,
+) {
+    if let Some(ev) = resize_reader.read().next() {
+        if ev.width < 600. || ev.height < 480. {
+            *sizes = Sizes::SMALL;
+        } else {
+            *sizes = Sizes::default();
+        }
     }
 }

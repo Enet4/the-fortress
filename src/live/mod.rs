@@ -41,7 +41,7 @@ use crate::{
     },
     logic::{Num, TargetRule},
     structure::Fork,
-    ui::{button_system, spawn_button_in_group, spawn_button_with_style, MeterBundle},
+    ui::{button_system, spawn_button_in_group, spawn_button_with_style, MeterBundle, Sizes},
     AppState, GameSettings,
 };
 
@@ -390,7 +390,12 @@ enum DefeatButtonAction {
 pub struct TimeIndicator;
 
 /// Set up the main UI components in the game for the first time
-fn setup_ui(mut cmd: Commands, default_font: Res<DefaultFont>, game_settings: Res<GameSettings>) {
+fn setup_ui(
+    mut cmd: Commands,
+    default_font: Res<DefaultFont>,
+    sizes: Res<Sizes>,
+    game_settings: Res<GameSettings>,
+) {
     let font = &default_font.0;
 
     // Node for the bottom HUD
@@ -493,6 +498,7 @@ fn setup_ui(mut cmd: Commands, default_font: Res<DefaultFont>, game_settings: Re
         // button to resume the game
         spawn_button_in_group(
             cmd,
+            &sizes,
             font.clone(),
             "Resume",
             PauseButton,
@@ -502,6 +508,7 @@ fn setup_ui(mut cmd: Commands, default_font: Res<DefaultFont>, game_settings: Re
         // button to return to main menu
         spawn_button_in_group(
             cmd,
+            &sizes,
             font.clone(),
             "Give Up",
             PauseButton,
@@ -552,6 +559,7 @@ fn setup_ui(mut cmd: Commands, default_font: Res<DefaultFont>, game_settings: Re
         // button to restart the current level
         spawn_button_in_group(
             cmd,
+            &sizes,
             font.clone(),
             "Restart Level",
             DefeatButton,
@@ -561,6 +569,7 @@ fn setup_ui(mut cmd: Commands, default_font: Res<DefaultFont>, game_settings: Re
         // button to return to main menu
         spawn_button_in_group(
             cmd,
+            &sizes,
             font.clone(),
             "Give Up",
             DefeatButton,
@@ -670,7 +679,6 @@ pub fn process_target_destroyed(
 ) {
     let mut done = false;
     for _ in target_destroyed_events.read() {
-        println!("Target destroyed");
         if done {
             // if done, we can consume the rest of the events and continue normally
             continue;
@@ -678,20 +686,14 @@ pub fn process_target_destroyed(
         // count the number of targets still on scene
         let num_targets = target_q.iter().count();
         if num_targets > 0 {
-            println!("Should not progress yet: {} targets left", num_targets);
             continue;
         }
         // and count the number of mob spawners still on scene
         let num_mobspawners = active_mob_spawners_q.iter().count();
         if num_mobspawners > 0 {
-            println!(
-                "Should not progress yet: {} mob spawners left",
-                num_mobspawners
-            );
             continue;
         }
 
-        println!("No more activity on screen");
         // let's move!
         let mut player_movement = player_q.single_mut();
         *player_movement = PlayerMovement::Walking;
@@ -721,6 +723,7 @@ pub fn process_end_of_corridor(
     >,
     fork_q: Query<&Transform, With<Fork>>,
     default_font: Res<DefaultFont>,
+    sizes: Res<Sizes>,
 ) {
     // retrieve player
     let Ok((mut player_movement, mut health, player_transform)) = player_q.get_single_mut() else {
@@ -741,7 +744,7 @@ pub fn process_end_of_corridor(
         health.replenish();
 
         // and spawn new input arrows to select which way to go
-        spawn_decision_arrows(&mut cmd, default_font);
+        spawn_decision_arrows(&mut cmd, default_font, &sizes);
     }
 }
 
@@ -755,7 +758,7 @@ enum Decision {
     Right,
 }
 
-fn spawn_decision_arrows(cmd: &mut Commands, default_font: Res<DefaultFont>) {
+fn spawn_decision_arrows(cmd: &mut Commands, default_font: Res<DefaultFont>, sizes: &Sizes) {
     let font = &default_font.0;
     cmd.spawn((
         OnLive,
@@ -784,6 +787,7 @@ fn spawn_decision_arrows(cmd: &mut Commands, default_font: Res<DefaultFont>) {
     .with_children(|cmd| {
         spawn_button_with_style(
             cmd,
+            sizes,
             font.clone(),
             "<",
             Style {
@@ -802,6 +806,7 @@ fn spawn_decision_arrows(cmd: &mut Commands, default_font: Res<DefaultFont>) {
         );
         spawn_button_with_style(
             cmd,
+            sizes,
             font.clone(),
             ">",
             Style {
