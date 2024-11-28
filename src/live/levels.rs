@@ -456,7 +456,7 @@ impl LevelSpec {
         // the level where we start having fractions
         LevelSpec {
             corridor_length: 180.,
-            rng_seed: 0x3454_4321,
+            rng_seed: 0x3454_4321_ffff,
             things: vec![
                 // spawn a 1/3 cube
                 (
@@ -481,7 +481,7 @@ impl LevelSpec {
                     0.3,
                     MobSpawner::new(
                         20,
-                        1.75,
+                        2.,
                         [
                             // 1/3
                             frac!(1 / 3),
@@ -511,7 +511,7 @@ impl LevelSpec {
                     0.7,
                     MobSpawner::new(
                         20,
-                        1.5,
+                        1.8,
                         [
                             // 1/3
                             frac!(1 / 3),
@@ -590,7 +590,7 @@ impl LevelSpec {
                     0.3,
                     MobSpawner::new(
                         16,
-                        1.5,
+                        1.7,
                         [
                             // 1/2
                             frac!(1 / 2),
@@ -646,7 +646,7 @@ impl LevelSpec {
                     0.7,
                     MobSpawner::new(
                         22,
-                        1.5,
+                        1.66,
                         [
                             // 2
                             frac!(4 / 2),
@@ -726,7 +726,7 @@ impl LevelSpec {
                     0.3,
                     MobSpawner::new(
                         16,
-                        1.5,
+                        1.7,
                         [
                             // 1/3
                             frac!(1 / 3),
@@ -782,7 +782,7 @@ impl LevelSpec {
                     0.7,
                     MobSpawner::new(
                         22,
-                        1.5,
+                        1.66,
                         [
                             // 2
                             frac!(4 / 2),
@@ -850,13 +850,11 @@ impl LevelSpec {
             rng_seed: 0,
             things: vec![(
                 0.,
-                InterludeSpec::from_sequence_and_exit(
-                    ([
-                        (include_str!("interludes/z_bedroom_1.txt"), None),
-                        (include_str!("interludes/z_bedroom_2.txt"), None),
-                        (include_str!("interludes/z_bedroom_3.txt"), None),
-                    ]),
-                ),
+                InterludeSpec::from_sequence_and_exit([
+                    (include_str!("interludes/z_bedroom_1.txt"), None),
+                    (include_str!("interludes/z_bedroom_2.txt"), None),
+                    (include_str!("interludes/z_bedroom_3.txt"), None),
+                ]),
             )
                 .into()],
         }
