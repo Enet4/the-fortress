@@ -1,9 +1,11 @@
-# The Fortress of ?
+# The Fortress
 
-[![pr_check](https://github.com/Enet4/fortress-of-amaths/actions/workflows/pr_check.yml/badge.svg)](https://github.com/Enet4/fortress-of-amaths/actions/workflows/pr_check.yml)
+[![Deploy to GitHub Pages](https://github.com/Enet4/the-fortress/actions/workflows/deploy.yml/badge.svg)](https://github.com/Enet4/the-fortress/actions/workflows/deploy.yml)
 
 An action educational game.
 Use your mathematical weapons to strike the enemies as you enter deep into the fortress.
+
+You can play the latest version [here on GitHub](https://enet4.github.io/the-fortress/).
 
 ## Setting up
 
@@ -20,7 +22,7 @@ cargo run
 To build for WebAssembly:
 
 ```sh
-cargo build --target wasm32-unknown-unknown --profile=wasm-release
+trunk build --features=webgl2
 ```
 
 ## Licensing and Attribution
