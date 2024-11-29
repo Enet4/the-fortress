@@ -2,8 +2,8 @@
 
 [![Deploy to GitHub Pages](https://github.com/Enet4/the-fortress/actions/workflows/deploy.yml/badge.svg)](https://github.com/Enet4/the-fortress/actions/workflows/deploy.yml)
 
-An action educational game.
-Use your mathematical weapons to strike the enemies as you enter deep into the fortress.
+An action game of quick arithmetic skill.
+Use your mathematical weapons to strike the enemies as you enter deep into the fortress of the wizard.
 
 You can play the latest version [here on GitHub](https://enet4.github.io/the-fortress/).
 
