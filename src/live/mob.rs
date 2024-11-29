@@ -90,7 +90,6 @@ pub struct MobSpawnerBundle {
 pub fn destroy_spawner_when_done(mut q: Query<(Entity, &MobSpawner)>, mut commands: Commands) {
     for (entity, spawner) in q.iter_mut() {
         if spawner.count == 0 {
-            println!("Destroying mob spawner");
             commands.entity(entity).despawn();
         }
     }
@@ -110,7 +109,6 @@ pub fn process_spawner_trigger(
     let time = time.elapsed_seconds();
     for (entity, mut spawner, phase) in q.iter_mut() {
         if phase.should_trigger(&player_transform.translation) {
-            println!("Mob spawner activated");
             spawner.active = true;
             spawner.last_spawn = time - spawner.spawn_interval;
 
@@ -138,7 +136,6 @@ pub fn spawn_mobs_on_time(
         }
         let relative_elapsed = time - spawner.last_spawn;
         if relative_elapsed >= spawner.spawn_interval {
-            println!("Spawning mob");
             // spawn a mob
             // use an RNG to pseudorandomize the position
             let rel_x = (random.rng.next_range(0..14_u32) as f32 - 7.) / 2.;

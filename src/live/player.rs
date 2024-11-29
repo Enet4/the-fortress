@@ -116,7 +116,6 @@ pub fn process_attacks(
     for PlayerAttack { entity, num } in events.read() {
         // query entity for target information
         let Ok((mut target, health)) = target_query.get_mut(*entity) else {
-            eprintln!("no target found for attack");
             return;
         };
 
