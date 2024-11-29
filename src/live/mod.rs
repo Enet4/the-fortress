@@ -268,12 +268,12 @@ impl LiveTime {
 
 impl fmt::Display for LiveTime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // mm:ss.SS
+        // mm:ss.S
         let elapsed = self.0.elapsed_secs();
         let elapsed_whole = elapsed as i64;
         let minutes = elapsed_whole / 60;
         let rest = elapsed - (minutes as f32 * 60.);
-        write!(f, "{minutes:02}:{rest:05.2}")
+        write!(f, "{minutes:02}:{rest:04.1}")
     }
 }
 
