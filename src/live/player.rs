@@ -174,6 +174,7 @@ pub struct DamagePlayer {
 pub fn process_damage_player(
     mut cmd: Commands,
     mut events: EventReader<DamagePlayer>,
+    audio_sources: Res<AudioHandles>,
     cheats: Res<Cheats>,
     mut player_q: Query<(Entity, &mut Health), With<Player>>,
     mut postprocess_settings_q: Query<&mut PostProcessSettings>,
@@ -184,7 +185,7 @@ pub fn process_damage_player(
     }
 
     for DamagePlayer { damage } in events.read() {
-        // TODO play sound effect
+        audio_sources.play_hit37(&mut cmd);
 
         let Ok((player_entity, mut player_health)) = player_q.get_single_mut() else {
             return;
@@ -195,7 +196,7 @@ pub fn process_damage_player(
         if let Ok(mut settings) = postprocess_settings_q.get_single_mut() {
             settings.add_intensity(0.5);
             if player_health.value <= 0.2 {
-                settings.oscillate = 0.45;
+                settings.oscillate = 0.48;
             } else if player_health.value < 0.3 {
                 settings.oscillate = 0.25;
             } else if player_health.value < 0.5 {

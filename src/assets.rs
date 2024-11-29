@@ -57,6 +57,7 @@ pub struct AudioHandles {
     pub equipmentclick1: Handle<AudioSource>,
     pub fireball: Handle<AudioSource>,
     pub hit02: Handle<AudioSource>,
+    pub hit37: Handle<AudioSource>,
     pub dread: Handle<AudioSource>,
 }
 
@@ -68,6 +69,7 @@ impl FromWorld for AudioHandles {
         let equipmentclick1 = asset_server.load("audio/equipmentclick1.ogg");
         let fireball = asset_server.load("audio/fireball.ogg");
         let hit02 = asset_server.load("audio/hit02.ogg");
+        let hit37 = asset_server.load("audio/hit37.ogg");
         let dread = asset_server.load("audio/dread.ogg");
 
         AudioHandles {
@@ -77,6 +79,7 @@ impl FromWorld for AudioHandles {
             equipmentclick1,
             fireball,
             hit02,
+            hit37,
             dread,
         }
     }
@@ -101,6 +104,10 @@ impl AudioHandles {
 
     pub fn play_hit02<'a>(&self, cmd: &'a mut Commands) -> Option<EntityCommands<'a>> {
         self.play_impl(cmd, &self.hit02)
+    }
+
+    pub fn play_hit37<'a>(&self, cmd: &'a mut Commands) -> Option<EntityCommands<'a>> {
+        self.play_impl(cmd, &self.hit37)
     }
 
     pub fn play_dread<'a>(&self, cmd: &'a mut Commands) -> Option<EntityCommands<'a>> {
