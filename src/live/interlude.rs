@@ -259,14 +259,20 @@ pub struct AdvanceInterlude(Entity, InterludeEffect);
 /// system that detects a click and moves forward in the interlude
 pub fn on_click_advance_interlude(
     mut cmd: Commands,
-    on_click: Res<ButtonInput<MouseButton>>,
+    mouse_button_input: Res<ButtonInput<MouseButton>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    touches: Res<Touches>,
     // should only fetch the interlude being presented,
     // hence `Without<PhaseTrigger>`
     interlude_q: Query<(Entity, &InterludeSpec), Without<PhaseTrigger>>,
     interlude_pieces_q: Query<(Entity, Has<FadeOut>), With<InterludePiece>>,
     mut advance_event: EventWriter<AdvanceInterlude>,
 ) {
-    if !on_click.just_pressed(MouseButton::Left) {
+    // advance on left mouse click, Enter, or tap
+    if !mouse_button_input.just_pressed(MouseButton::Left)
+        && !keyboard_input.just_pressed(KeyCode::Enter)
+        && !touches.any_just_pressed()
+    {
         return;
     }
 
