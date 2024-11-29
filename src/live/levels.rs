@@ -59,10 +59,10 @@ impl LevelId {
         }
     }
 
-    pub fn add_decision(&mut self, decision: Decision) {
-        if self.stage > 7 {
+    pub fn add_decision(&mut self, decision: Decision) -> bool {
+        if self.stage >= LevelSpec::MAX_STAGES {
             warn!("Cannot move to the next level: maximum stage reached");
-            return;
+            return false;
         }
 
         if decision == Decision::Left {
@@ -71,6 +71,7 @@ impl LevelId {
             self.decisions |= 1 << self.stage;
             self.stage += 1;
         }
+        true
     }
 }
 
@@ -82,9 +83,13 @@ pub struct CurrentLevel {
 }
 
 impl CurrentLevel {
-    pub fn advance(&mut self, decision: Decision) {
-        self.id.add_decision(decision);
-        self.spec = LevelSpec::level(self.id);
+    pub fn advance(&mut self, decision: Decision) -> bool {
+        if self.id.add_decision(decision) {
+            self.spec = LevelSpec::level(self.id);
+            true
+        } else {
+            false
+        }
     }
 
     pub fn reset(&mut self) {
@@ -162,6 +167,8 @@ macro_rules! frac {
 }
 
 impl LevelSpec {
+    const MAX_STAGES: u8 = 5;
+
     fn level(level: LevelId) -> Self {
         match level {
             // starting level
@@ -188,12 +195,26 @@ impl LevelSpec {
             // ending 2
             LevelId {
                 stage: 5,
-                decisions: 0b0000,
+                // keep going left then right
+                decisions: 0b10000,
             }
             | LevelId {
                 stage: 5,
-                decisions: 0b1111,
+                // keep going right, then left
+                decisions: 0b01111,
             } => Self::ending_bedroom(),
+
+            // ending 3: zig-zag
+            LevelId {
+                stage: 5,
+                // zig-zag
+                decisions: 0b01010,
+            }
+            | LevelId {
+                stage: 5,
+                // zig-zag
+                decisions: 0b10101,
+            } => Self::ending_dungeon(),
 
             // fallback for most levels after the final stage
             // (this will depend on how many levels I mange to build...)
@@ -426,7 +447,11 @@ impl LevelSpec {
                     .into(),
                 (
                     0.35,
-                    MobSpawner::new(15, 1.75, [6, 12, 14, 20, 28, 32, 39, 54, 63, 64, 70, 66]),
+                    MobSpawner::new(
+                        15,
+                        1.75,
+                        [12, 28, 20, 32, 64, 6, 18, 42, 66, 14, 20, 35, 54, 63, 70],
+                    ),
                 )
                     .into(),
                 // add cube 11
@@ -854,6 +879,30 @@ impl LevelSpec {
                     (include_str!("interludes/z_bedroom_1.txt"), None),
                     (include_str!("interludes/z_bedroom_2.txt"), None),
                     (include_str!("interludes/z_bedroom_3.txt"), None),
+                ]),
+            )
+                .into()],
+        }
+    }
+
+    fn ending_dungeon() -> LevelSpec {
+        // Ending 3: the dungeon
+        LevelSpec {
+            corridor_length: 1000.,
+            rng_seed: 0,
+            things: vec![(
+                0.,
+                InterludeSpec::from_sequence_and_exit([
+                    (
+                        include_str!("interludes/z_dungeon_1.txt"),
+                        Some("interlude-dungeon-1.png"),
+                    ),
+                    (
+                        include_str!("interludes/z_dungeon_2.txt"),
+                        Some("interlude-dungeon-2.png"),
+                    ),
+                    (include_str!("interludes/z_dungeon_3.txt"), None),
+                    (include_str!("interludes/z_dungeon_4.txt"), None),
                 ]),
             )
                 .into()],
