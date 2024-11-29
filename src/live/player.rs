@@ -56,7 +56,7 @@ pub fn process_player_movement(
     let elapsed = time.delta_seconds();
 
     const MAX_SPEED: f32 = 11.;
-    const SLOW_SPEED: f32 = 6.;
+    const SLOW_SPEED: f32 = 5.;
 
     for (movement, mut velocity) in query.iter_mut() {
         match movement {
