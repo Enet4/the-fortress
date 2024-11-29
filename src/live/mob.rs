@@ -208,7 +208,7 @@ impl FromWorld for MobAssets {
             .unwrap();
 
         let material = materials.add(StandardMaterial {
-            base_color: Color::srgb(0.75, 0.25, 0.5),
+            base_color: Color::srgb(0.66, 0.125, 0.5),
             ..Default::default()
         });
 
