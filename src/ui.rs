@@ -16,8 +16,8 @@ impl Default for Sizes {
         Sizes {
             button_min_width: 240.,
             title_font_size: 72.,
-            button_font_size: 36.,
-            interlude_font_size: 26.,
+            button_font_size: 40.,
+            interlude_font_size: 28.,
             outer_padding: 14.,
         }
     }
@@ -27,10 +27,10 @@ impl Sizes {
     /// Sizes for a smaller screen
     pub const SMALL: Self = Sizes {
         button_min_width: 180.,
-        title_font_size: 48.,
-        button_font_size: 24.,
-        interlude_font_size: 18.,
-        outer_padding: 10.,
+        title_font_size: 46.,
+        button_font_size: 25.,
+        interlude_font_size: 20.,
+        outer_padding: 2.,
     };
 }
 
@@ -223,6 +223,31 @@ pub fn button_system<T>(
             (Interaction::Hovered, Some(_)) => HOVERED_PRESSED_BUTTON,
             (Interaction::Hovered, None) => HOVERED_BUTTON,
             (Interaction::None, None) => NORMAL_BUTTON,
+        }
+    }
+}
+
+pub fn update_buttons_on_window_resize(
+    sizes: Res<Sizes>,
+    mut button_q: Query<(&mut Style, &Children), With<Button>>,
+    mut button_text_q: Query<&mut Text>,
+) {
+    if !sizes.is_changed() && !sizes.is_added() {
+        return;
+    }
+    for (mut style, children) in &mut button_q {
+        style.min_width = Val::Px(sizes.button_min_width);
+
+        // update the button text font size
+        let font_size = sizes.button_font_size;
+        for child in children {
+            let Ok(mut text) = button_text_q.get_mut(*child) else {
+                continue;
+            };
+            // update all sections
+            for section in &mut text.sections {
+                section.style.font_size = font_size;
+            }
         }
     }
 }

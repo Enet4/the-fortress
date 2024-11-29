@@ -9,7 +9,7 @@ use cheat::{Cheats, TextBuffer};
 use live::LiveActionPlugin;
 use menu::MenuPlugin;
 use postprocess::PostProcessPlugin;
-use ui::Sizes;
+use ui::{update_buttons_on_window_resize, Sizes};
 
 mod assets;
 mod cheat;
@@ -97,7 +97,7 @@ fn main() {
                 postprocess::oscillate_dithering,
                 postprocess::fadeout_dithering,
                 cheat::cheat_input,
-                update_ui_sizes_on_resize,
+                (update_ui_sizes_on_resize, update_buttons_on_window_resize).chain(),
             ),
         )
         .add_systems(PostUpdate, (effect::apply_glimmer,))

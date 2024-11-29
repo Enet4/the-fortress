@@ -123,10 +123,7 @@ pub fn spawn_interlude(
                 position_type: PositionType::Absolute,
                 width: Val::Percent(100.),
                 height: Val::Percent(100.),
-                padding: UiRect::axes(
-                    Val::Px(sizes.outer_padding + 24.),
-                    Val::Px(sizes.outer_padding),
-                ),
+                padding: UiRect::all(Val::Px(sizes.outer_padding)),
                 ..default()
             },
             background_color: Color::BLACK.into(),
@@ -174,8 +171,8 @@ pub fn spawn_interlude(
                                 bottom: Val::Px(10.),
                                 ..default()
                             },
-                            height: Val::Auto,
-                            width: Val::Percent(40.),
+                            max_height: Val::Percent(100.),
+                            max_width: Val::Percent(40.),
                             ..default()
                         },
                         image: UiImage {
