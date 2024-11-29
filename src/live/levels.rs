@@ -420,18 +420,18 @@ impl LevelSpec {
                     .into(),
                 // one mob spawner after another
                 (
-                    0.36,
+                    0.3,
                     MobSpawner::new(10, 1.75, [8, 7, 16, 24, 36, 49, 56, 80]),
                 )
                     .into(),
                 (
-                    0.4,
+                    0.35,
                     MobSpawner::new(15, 1.75, [6, 12, 14, 20, 28, 32, 39, 54, 63, 64, 70, 66]),
                 )
                     .into(),
                 // add cube 11
                 (
-                    0.6,
+                    0.65,
                     ThingKind::WeaponCube {
                         x: 0.,
                         num: 11.into(),
@@ -478,7 +478,7 @@ impl LevelSpec {
                     .into(),
                 // spawn a mob spawner with equivalent fractions
                 (
-                    0.3,
+                    0.26,
                     MobSpawner::new(
                         20,
                         2.,
