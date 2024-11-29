@@ -8,9 +8,15 @@ use bevy::{
     prelude::*,
 };
 
+use crate::{
+    live::{CurrentLevel, Decision, LiveState},
+    AppState,
+};
+
 /// Resource for long-lasting cheat effects
 #[derive(Debug, Default, Resource)]
 pub struct Cheats {
+    pub used_cheats: bool,
     pub invulnerability: bool,
 }
 
@@ -45,6 +51,9 @@ impl TextBuffer {
 pub fn cheat_input(
     mut text_buffer: ResMut<TextBuffer>,
     mut keyboard_input: EventReader<KeyboardInput>,
+    current_level: ResMut<CurrentLevel>,
+    app_state: Res<State<AppState>>,
+    next_state: ResMut<NextState<LiveState>>,
     cheats: ResMut<Cheats>,
 ) {
     let mut has_presses = false;
@@ -67,14 +76,44 @@ pub fn cheat_input(
         }
     }
     if has_presses {
-        check_cheat(text_buffer, cheats);
+        check_cheat(text_buffer, cheats, current_level, app_state, next_state);
     }
 }
 
-fn check_cheat(mut text_buffer: ResMut<TextBuffer>, mut cheats: ResMut<Cheats>) {
+fn check_cheat(
+    mut text_buffer: ResMut<TextBuffer>,
+    mut cheats: ResMut<Cheats>,
+    mut current_level: ResMut<CurrentLevel>,
+    app_state: Res<State<AppState>>,
+    mut next_state: ResMut<NextState<LiveState>>,
+) {
     if text_buffer.has_typed("iddqd") {
-        cheats.invulnerability = true;
-        println!("Cheat code activated: invulnerability");
+        cheats.invulnerability = !cheats.invulnerability;
+        if cheats.invulnerability {
+            println!("Cheat code activated: invulnerability");
+        } else {
+            println!("Cheat code deactivated: invulnerability");
+        }
+        cheats.used_cheats = true;
         text_buffer.clear();
+    } else if text_buffer.has_typed("nothingleftforme") {
+        if *app_state.get() == AppState::Live {
+            println!("Cheat code activated: next level by going left");
+            if current_level.advance(Decision::Left) {
+                next_state.set(LiveState::LoadingLevel);
+            }
+            cheats.used_cheats = true;
+            text_buffer.clear();
+        }
+        text_buffer.clear();
+    } else if text_buffer.has_typed("thisisdownrightridiculous") {
+        println!("Cheat code activated: next level by going right");
+        if *app_state.get() == AppState::Live {
+            if current_level.advance(Decision::Right) {
+                next_state.set(LiveState::LoadingLevel);
+            }
+            cheats.used_cheats = true;
+            text_buffer.clear();
+        }
     }
 }

@@ -19,7 +19,6 @@ mod scene;
 mod weapon;
 
 use interlude::AdvanceInterlude;
-use levels::CurrentLevel;
 use mob::MobSpawner;
 use phase::PhaseTrigger;
 use player::{
@@ -47,10 +46,12 @@ use crate::{
 
 use super::CameraMarker;
 
+pub use levels::CurrentLevel;
+
 /// Running or paused
 #[derive(SubStates, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[source(AppState = AppState::Live)]
-enum LiveState {
+pub enum LiveState {
     /// Intermediate state for loading a new level
     #[default]
     LoadingLevel,
@@ -766,9 +767,12 @@ pub fn process_end_of_corridor(
 #[derive(Debug, Component)]
 struct DecisionArrowsDiv;
 
+/// A decision at the end of each level corridor
 #[derive(Debug, Copy, Clone, PartialEq, Component)]
-enum Decision {
+pub enum Decision {
+    /// Go left
     Left,
+    /// Go right
     Right,
 }
 

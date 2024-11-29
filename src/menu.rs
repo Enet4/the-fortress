@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     assets::{AudioHandles, DefaultFont},
+    cheat::Cheats,
     despawn_all_at,
     live::LiveTime,
     ui::{button_system, spawn_button, Sizes},
@@ -129,6 +130,7 @@ pub fn main_menu_setup(
     default_font: Res<DefaultFont>,
     sizes: Res<Sizes>,
     time: Res<LiveTime>,
+    cheats: Res<Cheats>,
 ) {
     // division for main buttons
     cmd.spawn((
@@ -188,7 +190,12 @@ pub fn main_menu_setup(
 
         // the game time of the last session
         if time.elapsed_seconds() > 0. {
-            let text = format!("Last session: {}", &*time);
+            let with_cheats = if cheats.used_cheats {
+                " (with cheats)"
+            } else {
+                ""
+            };
+            let text = format!("Last session: {}{}", &*time, with_cheats);
             cmd.spawn(TextBundle {
                 style: Style {
                     position_type: PositionType::Absolute,
