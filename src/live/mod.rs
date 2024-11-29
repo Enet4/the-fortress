@@ -39,6 +39,7 @@ use crate::{
         Collapsing,
     },
     logic::{Num, TargetRule},
+    postprocess::PostProcessSettings,
     structure::Fork,
     ui::{button_system, spawn_button_in_group, spawn_button_with_style, MeterBundle, Sizes},
     AppState, GameSettings,
@@ -240,10 +241,19 @@ fn reset_game(
     current_level.reset();
 }
 
-fn enter_defeat(mut defeat_div_q: Query<&mut Style, With<DefeatDiv>>) {
+fn enter_defeat(
+    mut cmd: Commands,
+    mut defeat_div_q: Query<&mut Style, With<DefeatDiv>>,
+    mut postprocess_settings_q: Query<&mut PostProcessSettings>,
+    audio_sources: Res<AudioHandles>,
+) {
     for mut style in defeat_div_q.iter_mut() {
         style.display = Display::Flex;
     }
+    if let Ok(mut settings) = postprocess_settings_q.get_single_mut() {
+        settings.oscillate = 0.5;
+    };
+    audio_sources.play_dread(&mut cmd);
 }
 
 /// Marker component for everything in live mode
