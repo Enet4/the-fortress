@@ -284,7 +284,7 @@ fn pause_on_esc(
     mut next_paused_state: ResMut<NextState<LiveState>>,
     mut paused_node_q: Query<&mut Style, With<PausedDiv>>,
 ) {
-    if input.just_pressed(KeyCode::Escape) {
+    if input.just_pressed(KeyCode::Escape) || input.just_pressed(KeyCode::BrowserBack) {
         match paused_state.get() {
             LiveState::Running => {
                 next_paused_state.set(LiveState::Paused);
