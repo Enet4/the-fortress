@@ -8,7 +8,8 @@ pub struct Sizes {
     pub title_font_size: f32,
     pub button_font_size: f32,
     pub interlude_font_size: f32,
-    pub outer_padding: f32,
+    pub outer_padding_h: f32,
+    pub outer_padding_v: f32,
 }
 
 impl Default for Sizes {
@@ -17,8 +18,9 @@ impl Default for Sizes {
             button_min_width: 240.,
             title_font_size: 72.,
             button_font_size: 40.,
-            interlude_font_size: 28.,
-            outer_padding: 14.,
+            interlude_font_size: 32.,
+            outer_padding_h: 48.,
+            outer_padding_v: 16.,
         }
     }
 }
@@ -30,7 +32,8 @@ impl Sizes {
         title_font_size: 46.,
         button_font_size: 25.,
         interlude_font_size: 20.,
-        outer_padding: 2.,
+        outer_padding_h: 4.,
+        outer_padding_v: 2.,
     };
 }
 

@@ -123,7 +123,10 @@ pub fn spawn_interlude(
                 position_type: PositionType::Absolute,
                 width: Val::Percent(100.),
                 height: Val::Percent(100.),
-                padding: UiRect::all(Val::Px(sizes.outer_padding)),
+                padding: UiRect::axes(
+                    Val::Px(sizes.outer_padding_h),
+                    Val::Px(sizes.outer_padding_v),
+                ),
                 ..default()
             },
             background_color: Color::BLACK.into(),
