@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use crate::{
     assets::{AudioHandles, DefaultFont},
     despawn_all_at,
+    live::LiveTime,
     ui::{button_system, spawn_button, Sizes},
     AppState, CameraMarker, GameSettings,
 };
@@ -123,7 +124,12 @@ fn menu_setup(
 pub struct OnMainMenu;
 
 /// system to spawn the main menu UI
-pub fn main_menu_setup(mut cmd: Commands, default_font: Res<DefaultFont>, sizes: Res<Sizes>) {
+pub fn main_menu_setup(
+    mut cmd: Commands,
+    default_font: Res<DefaultFont>,
+    sizes: Res<Sizes>,
+    time: Res<LiveTime>,
+) {
     // division for main buttons
     cmd.spawn((
         OnMainMenu,
@@ -134,6 +140,7 @@ pub fn main_menu_setup(mut cmd: Commands, default_font: Res<DefaultFont>, sizes:
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::Center,
                 width: Val::Percent(100.),
+                height: Val::Percent(100.),
                 margin: UiRect {
                     top: Val::Auto,
                     bottom: Val::Auto,
@@ -158,6 +165,48 @@ pub fn main_menu_setup(mut cmd: Commands, default_font: Res<DefaultFont>, sizes:
         );
         // button to exit the game
         spawn_button(cmd, &sizes, font.clone(), "Exit", MenuButtonAction::Exit);
+
+        // version text
+        cmd.spawn(TextBundle {
+            style: Style {
+                position_type: PositionType::Absolute,
+                right: Val::Px(16.),
+                bottom: Val::Px(2.),
+                ..default()
+            },
+            text: Text::from_section(
+                // cargo project version
+                format!("v{}", env!("CARGO_PKG_VERSION")),
+                TextStyle {
+                    font: font.clone(),
+                    font_size: sizes.interlude_font_size,
+                    color: Color::WHITE,
+                },
+            ),
+            ..default()
+        });
+
+        // the game time of the last session
+        if time.elapsed_seconds() > 0. {
+            let text = format!("Last session: {}", &*time);
+            cmd.spawn(TextBundle {
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(4.),
+                    bottom: Val::Px(2.),
+                    ..default()
+                },
+                text: Text::from_section(
+                    text,
+                    TextStyle {
+                        font: font.clone(),
+                        font_size: sizes.interlude_font_size,
+                        color: Color::WHITE,
+                    },
+                ),
+                ..default()
+            });
+        }
     });
 }
 
