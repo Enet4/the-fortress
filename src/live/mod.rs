@@ -12,7 +12,6 @@ mod icon;
 mod interlude;
 mod levels;
 mod mob;
-pub mod obstacle;
 mod phase;
 mod player;
 mod projectile;
@@ -150,12 +149,17 @@ impl Plugin for LiveActionPlugin {
             .add_systems(
                 FixedUpdate,
                 (
-                    // this one needs to run after systems which despawn TargetDestroyed events
-                    (process_target_destroyed, process_attacks).chain(),
+                    // some systems need to run after those which create TargetDestroyed events
+                    (
+                        process_target_destroyed,
+                        process_attacks,
+                        mob::hurry_mob_spawners_on_no_targets,
+                    )
+                        .chain(),
                     projectile::projectile_collision,
                     mob::destroy_spawner_when_done,
                     process_new_target,
-                    mob::spawn_mobs,
+                    mob::spawn_mobs_on_time,
                     process_damage_player,
                     (process_live_time, update_timer_text).chain(),
                     weapon::process_weapon_change,

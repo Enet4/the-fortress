@@ -34,12 +34,9 @@ fn new_wall(
     )
 }
 
-/// Component describing the corridor and its dimensions
-/// (Z is forward, Y is up, X is right-strafe)
+/// Marker component identifying a corridor
 #[derive(Debug, Component)]
-pub struct Corridor {
-    pub dim: Vec3,
-}
+pub struct Corridor;
 
 /// spawn walls, floor, and ceiling
 /// according to the given properties
@@ -55,7 +52,7 @@ pub fn spawn_corridor<'a>(
     let corridor_half_dim = dim / 2.;
     let mut corridor = cmd.spawn((
         OnLive,
-        Corridor { dim },
+        Corridor,
         TransformBundle {
             local: Transform::from_translation(pos),
             ..Default::default()

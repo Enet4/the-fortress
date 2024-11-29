@@ -13,7 +13,7 @@ use super::{
     collision::CollidableBox,
     icon::{spawn_target_icon, HasIcon},
     phase::PhaseTrigger,
-    player::Player,
+    player::{Player, TargetDestroyed},
     Health, LiveTime, OnLive, Target,
 };
 
@@ -125,7 +125,7 @@ pub fn process_spawner_trigger(
 const MOB_SPAWN_Z_OFFSET: f32 = 12.;
 
 /// system that makes active mob spawners spawn mobs
-pub fn spawn_mobs(
+pub fn spawn_mobs_on_time(
     mut cmd: Commands,
     time: Res<LiveTime>,
     mob_assets: Res<MobAssets>,
@@ -169,6 +169,33 @@ pub fn spawn_mobs(
             // update spawner properties
             spawner.last_spawn += spawner.spawn_interval;
             spawner.count -= 1;
+        }
+    }
+}
+
+/// system that makes mob spawners spawn immediately when there are no targets left
+pub fn hurry_mob_spawners_on_no_targets(
+    time: Res<LiveTime>,
+    mut mob_spawner_q: Query<(&mut MobSpawner, &mut Randomness, &Transform)>,
+    target_q: Query<Entity, With<Target>>,
+    mut events: EventReader<TargetDestroyed>,
+) {
+    // only act upon the target destroyed event
+    if events.read().count() == 0 {
+        return;
+    }
+
+    // only act if there are no targets left
+    if !target_q.is_empty() {
+        return;
+    }
+
+    // grab one of the mob spawners and readjust last spawn time,
+    // so that a mob is spawned shortly after
+    for (mut spawner, _, _) in &mut mob_spawner_q.iter_mut() {
+        if spawner.active && spawner.count > 0 {
+            spawner.last_spawn = time.elapsed_seconds() - spawner.spawn_interval + 0.15;
+            break;
         }
     }
 }
