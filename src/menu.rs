@@ -68,10 +68,31 @@ struct MenuScreen;
 fn menu_setup(
     mut cmd: Commands,
     default_font: Res<DefaultFont>,
+    asset_loader: Res<AssetServer>,
     sizes: Res<Sizes>,
     mut next_state: ResMut<NextState<MenuState>>,
 ) {
     let font = &default_font.0;
+
+    let image = asset_loader.load("title.png");
+    // spawn background image
+    cmd.spawn((
+        MenuScreen,
+        ImageBundle {
+            style: Style {
+                position_type: PositionType::Absolute,
+                width: Val::Percent(100.),
+                height: Val::Percent(100.),
+                ..default()
+            },
+            image: UiImage {
+                texture: image,
+                ..default()
+            },
+            ..default()
+        },
+    ));
+
     // Title
     cmd.spawn((
         MenuScreen,
