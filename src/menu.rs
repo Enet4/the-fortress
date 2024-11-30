@@ -89,6 +89,7 @@ fn menu_setup(
                 texture: image,
                 ..default()
             },
+            z_index: ZIndex::Global(-1),
             ..default()
         },
     ));
