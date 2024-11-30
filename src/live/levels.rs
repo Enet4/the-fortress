@@ -47,18 +47,6 @@ impl fmt::Display for LevelId {
 }
 
 impl LevelId {
-    pub fn decision_at(&self, stage: u8) -> Option<Decision> {
-        if stage >= self.stage {
-            return None;
-        }
-        let d = (self.decisions >> stage) & 1;
-        if d != 0 {
-            Some(Decision::Right)
-        } else {
-            Some(Decision::Left)
-        }
-    }
-
     pub fn add_decision(&mut self, decision: Decision) -> bool {
         if self.stage >= LevelSpec::MAX_STAGES {
             warn!("Cannot move to the next level: maximum stage reached");
@@ -216,6 +204,12 @@ impl LevelSpec {
                 decisions: 0b10101,
             } => Self::ending_dungeon(),
 
+            // ending 4: the mirror
+            LevelId {
+                stage: 5,
+                decisions: 0b01001,
+            } => Self::ending_mirror(),
+
             // fallback for most levels after the final stage
             // (this will depend on how many levels I mange to build...)
             LevelId { stage: 5, .. } => Self::ending_circle(),
@@ -248,7 +242,7 @@ impl LevelSpec {
                     0.425,
                     InterludeSpec::from_sequence([
                         (include_str!("./interludes/2_1.txt"), None),
-                        (include_str!("./interludes/2_2.txt"), None),
+                        (include_str!("./interludes/2_2.txt"), Some("interlude-cube.png")),
                     ])
                 ).into(),
 
@@ -294,7 +288,7 @@ impl LevelSpec {
     fn level_1(level: LevelId) -> Self {
         LevelSpec {
             corridor_length: 200.,
-            rng_seed: 0x3333_3333,
+            rng_seed: 0x3333_3333_fefe + level.decisions as u64 * 997,
             things: vec![
                 // another message
                 (
@@ -345,10 +339,51 @@ impl LevelSpec {
         }
     }
 
-    fn level_2l(level: LevelId) -> Self {
+    fn level_2r(level: LevelId) -> Self {
+        let harder = level.decisions == 0b11;
+
+        let spawner_1 = if harder {
+            MobSpawner::new(
+                12,
+                1.75,
+                [10, 12, 15, 21, 25, 35, 49, 50, 54, 56, 63, 70, 72],
+            )
+        } else {
+            MobSpawner::new(10, 2., [3, 5, 7, 10, 12, 15, 18, 21, 25, 27, 35])
+        };
+
+        let spawner_2 = if harder {
+            MobSpawner::new(
+                20,
+                1.7,
+                [
+                    9, 10, 12, 15, 21, 25, 35, 49, 50, 54, 56, 60, 63, 70, 72, 84, 85, 87,
+                ],
+            )
+        } else {
+            MobSpawner::new(15, 1.8, [3, 5, 7, 9, 12, 14, 18, 24, 39, 49, 54, 56, 63])
+        };
+
+        let spawner_3 = if harder {
+            MobSpawner::new(
+                24,
+                1.5,
+                [
+                    4, 9, 12, 15, 21, 24, 27, 32, 33, 35, 39, 45, 49, 50, 54, 55, 56, 70, 77, 81,
+                    87, 91, 98,
+                ],
+            )
+        } else {
+            MobSpawner::new(
+                20,
+                1.75,
+                [2, 3, 4, 5, 6, 9, 12, 15, 21, 24, 32, 45, 49, 50, 51, 55],
+            )
+        };
+
         LevelSpec {
             corridor_length: 180.,
-            rng_seed: 0x3333_3333,
+            rng_seed: 0xc36b_58ca_1297_c528 + level.decisions as u64 * 997,
             things: vec![
                 // give three cubes to the player
                 (
@@ -376,16 +411,8 @@ impl LevelSpec {
                 )
                     .into(),
                 // one mob spawner after another
-                (
-                    0.36,
-                    MobSpawner::new(10, 1.75, [10, 7, 25, 28, 39, 49, 50, 56]),
-                )
-                    .into(),
-                (
-                    0.4,
-                    MobSpawner::new(15, 1.75, [3, 9, 14, 20, 21, 24, 39, 45, 63]),
-                )
-                    .into(),
+                (0.36, spawner_1).into(),
+                (0.4, spawner_2).into(),
                 // add cube 2
                 (
                     0.6,
@@ -396,23 +423,63 @@ impl LevelSpec {
                 )
                     .into(),
                 // a stronger mob spawner
-                (
-                    0.75,
-                    MobSpawner::new(
-                        24,
-                        1.5,
-                        [2, 3, 4, 5, 6, 9, 12, 21, 24, 32, 12, 45, 49, 50, 55, 56, 91],
-                    ),
-                )
-                    .into(),
+                (0.75, spawner_3).into(),
             ],
         }
     }
 
-    fn level_2r(level: LevelId) -> Self {
+    fn level_2l(level: LevelId) -> Self {
+        let harder = level.decisions == 0b01;
+
+        let spawner_1 = if !harder {
+            MobSpawner::new(10, 2., [4, 6, 7, 8, 12, 14, 16, 24, 35, 36])
+        } else {
+            MobSpawner::new(
+                15,
+                1.8,
+                [
+                    6, 7, 8, 12, 16, 20, 24, 28, 32, 35, 36, 49, 54, 56, 63, 64, 77, 80,
+                ],
+            )
+        };
+
+        let spawner_2 = if !harder {
+            MobSpawner::new(
+                15,
+                1.8,
+                [6, 7, 12, 18, 28, 20, 32, 35, 40, 42, 49, 54, 66, 70],
+            )
+        } else {
+            MobSpawner::new(
+                18,
+                1.75,
+                [
+                    12, 14, 18, 20, 28, 32, 35, 54, 64, 40, 42, 63, 66, 70, 77, 80, 84, 86, 91, 96,
+                    98,
+                ],
+            )
+        };
+
+        let spawner_3 = if !harder {
+            MobSpawner::new(
+                18,
+                1.7,
+                [6, 7, 8, 11, 12, 7, 8, 16, 22, 21, 24, 32, 36, 49, 55, 63],
+            )
+        } else {
+            MobSpawner::new(
+                24,
+                1.6,
+                [
+                    6, 12, 7, 8, 11, 16, 21, 22, 24, 32, 33, 36, 49, 55, 56, 60, 64, 70, 77, 84,
+                    91, 99, 121,
+                ],
+            )
+        };
+
         LevelSpec {
             corridor_length: 180.,
-            rng_seed: 0x3434_3434,
+            rng_seed: 0x3434_3434_1297_c528 + level.decisions as u64 * 997,
             things: vec![
                 // give three cubes to the player
                 (
@@ -440,20 +507,8 @@ impl LevelSpec {
                 )
                     .into(),
                 // one mob spawner after another
-                (
-                    0.3,
-                    MobSpawner::new(10, 1.75, [8, 7, 16, 24, 36, 49, 56, 80]),
-                )
-                    .into(),
-                (
-                    0.35,
-                    MobSpawner::new(
-                        15,
-                        1.75,
-                        [12, 28, 20, 32, 64, 6, 18, 42, 66, 14, 20, 35, 54, 63, 70],
-                    ),
-                )
-                    .into(),
+                (0.3, spawner_1).into(),
+                (0.35, spawner_2).into(),
                 // add cube 11
                 (
                     0.65,
@@ -464,24 +519,147 @@ impl LevelSpec {
                 )
                     .into(),
                 // a stronger mob spawner
-                (
-                    0.75,
-                    MobSpawner::new(
-                        24,
-                        1.5,
-                        [6, 12, 7, 8, 11, 16, 21, 24, 32, 36, 49, 55, 56, 60, 64, 121],
-                    ),
-                )
-                    .into(),
+                (0.75, spawner_3).into(),
             ],
         }
     }
 
     fn level_3(level: LevelId) -> Self {
+        let harder = level.decisions == 0b001;
+
+        let spawner_1 = MobSpawner::new(
+            12,
+            2.,
+            [
+                // 1/3
+                frac!(1 / 3),
+                frac!(2 / 6),
+                frac!(3 / 9),
+                frac!(6 / 18),
+                // 1/4
+                frac!(1 / 4),
+                frac!(4 / 16),
+                frac!(5 / 20),
+                frac!(6 / 24),
+            ],
+        );
+
+        let spawner_2 = if !harder {
+            MobSpawner::new(
+                15,
+                1.9,
+                [
+                    // 1/3
+                    frac!(1 / 3),
+                    frac!(2 / 6),
+                    frac!(4 / 12),
+                    frac!(6 / 18),
+                    frac!(7 / 21),
+                    frac!(8 / 24),
+                    frac!(9 / 27),
+                    // 1/4
+                    frac!(1 / 4),
+                    frac!(3 / 12),
+                    frac!(5 / 20),
+                    frac!(6 / 24),
+                    frac!(7 / 28),
+                    frac!(8 / 32),
+                    frac!(9 / 36),
+                ],
+            )
+        } else {
+            MobSpawner::new(
+                18,
+                1.72,
+                [
+                    // 1/3
+                    frac!(4 / 12),
+                    frac!(6 / 18),
+                    frac!(7 / 21),
+                    frac!(8 / 24),
+                    frac!(9 / 27),
+                    frac!(12 / 36),
+                    frac!(15 / 45),
+                    // 1/4
+                    frac!(3 / 12),
+                    frac!(5 / 20),
+                    frac!(6 / 24),
+                    frac!(7 / 28),
+                    frac!(8 / 32),
+                    frac!(9 / 36),
+                    frac!(12 / 48),
+                    frac!(15 / 60),
+                ],
+            )
+        };
+
+        let spawner_3 = if !harder {
+            MobSpawner::new(
+                20,
+                1.8,
+                [
+                    // 1/3
+                    frac!(1 / 3),
+                    frac!(2 / 6),
+                    frac!(3 / 9),
+                    frac!(4 / 12),
+                    frac!(6 / 18),
+                    frac!(7 / 21),
+                    // 1/4
+                    frac!(1 / 4),
+                    frac!(6 / 24),
+                    frac!(8 / 32),
+                    frac!(9 / 36),
+                    // 3/4
+                    frac!(3 / 4),
+                    frac!(6 / 8),
+                    frac!(9 / 12),
+                    frac!(12 / 16),
+                    frac!(15 / 20),
+                    frac!(18 / 24),
+                ],
+            )
+        } else {
+            MobSpawner::new(
+                25,
+                1.7,
+                [
+                    // 1/3
+                    frac!(2 / 6),
+                    frac!(3 / 9),
+                    frac!(4 / 12),
+                    frac!(6 / 18),
+                    frac!(7 / 21),
+                    frac!(9 / 27),
+                    frac!(10 / 30),
+                    frac!(16 / 48),
+                    frac!(24 / 72),
+                    // 1/4
+                    frac!(3 / 12),
+                    frac!(6 / 24),
+                    frac!(8 / 32),
+                    frac!(9 / 36),
+                    frac!(10 / 40),
+                    frac!(12 / 48),
+                    frac!(24 / 96),
+                    // 3/4
+                    frac!(3 / 4),
+                    frac!(6 / 8),
+                    frac!(9 / 12),
+                    frac!(12 / 16),
+                    frac!(15 / 20),
+                    frac!(18 / 24),
+                    frac!(21 / 28),
+                    frac!(24 / 32),
+                    frac!(33 / 44),
+                ],
+            )
+        };
+
         // the level where we start having fractions
         LevelSpec {
             corridor_length: 180.,
-            rng_seed: 0x3454_4321_ffff,
+            rng_seed: 0x3454_4321_ffff + level.decisions as u64 * 997,
             things: vec![
                 // spawn a 1/3 cube
                 (
@@ -502,26 +680,9 @@ impl LevelSpec {
                 )
                     .into(),
                 // spawn a mob spawner with equivalent fractions
-                (
-                    0.26,
-                    MobSpawner::new(
-                        20,
-                        2.,
-                        [
-                            // 1/3
-                            frac!(1 / 3),
-                            frac!(2 / 6),
-                            frac!(6 / 18),
-                            frac!(16 / 48),
-                            // 1/4
-                            frac!(1 / 4),
-                            frac!(4 / 16),
-                            frac!(6 / 24),
-                            frac!(8 / 32),
-                        ],
-                    ),
-                )
-                    .into(),
+                (0.225, spawner_1).into(),
+                // another mob spawner wave
+                (0.3, spawner_2).into(),
                 // spawn a 3/4 cube
                 (
                     0.5,
@@ -531,55 +692,188 @@ impl LevelSpec {
                     },
                 )
                     .into(),
-                // a heavier spawners
-                (
-                    0.7,
-                    MobSpawner::new(
-                        20,
-                        1.8,
-                        [
-                            // 1/3
-                            frac!(1 / 3),
-                            frac!(2 / 6),
-                            frac!(3 / 9),
-                            frac!(4 / 12),
-                            frac!(6 / 18),
-                            frac!(7 / 21),
-                            frac!(9 / 27),
-                            frac!(16 / 48),
-                            frac!(10 / 30),
-                            // 1/4
-                            frac!(1 / 4),
-                            frac!(6 / 24),
-                            frac!(8 / 32),
-                            frac!(9 / 36),
-                            frac!(10 / 40),
-                            frac!(12 / 48),
-                            // 3/4
-                            frac!(3 / 4),
-                            frac!(6 / 8),
-                            frac!(9 / 12),
-                            frac!(12 / 16),
-                            frac!(15 / 20),
-                            frac!(33 / 44),
-                            frac!(21 / 28),
-                            frac!(15 / 40),
-                        ],
-                    ),
-                )
-                    .into(),
+                // a heavier spawner
+                (0.72, spawner_3).into(),
             ],
         }
     }
 
     fn level_4l(level: LevelId) -> Self {
-        LevelSpec {
-            corridor_length: 200.,
-            rng_seed: 0x1ab2_4547,
+        // the hardest level
+        let harder = level.decisions == 0b11001;
+
+        let spawner_1 = MobSpawner::new(
+            14,
+            1.7,
+            [
+                // 1/2
+                frac!(1 / 2),
+                frac!(2 / 4),
+                frac!(4 / 8),
+                frac!(6 / 12),
+                frac!(8 / 16),
+                frac!(10 / 20),
+                frac!(16 / 32),
+                // 1/5
+                frac!(3 / 15),
+                frac!(4 / 20),
+                frac!(5 / 25),
+                frac!(6 / 30),
+                frac!(7 / 35),
+                frac!(8 / 40),
+                // 1/7
+                frac!(1 / 7),
+                frac!(2 / 14),
+                frac!(3 / 21),
+                frac!(4 / 28),
+                frac!(5 / 35),
+                frac!(6 / 42),
+                frac!(7 / 49),
+                frac!(8 / 56),
+                frac!(9 / 63),
+                frac!(11 / 77),
+                // 1/8
+                frac!(1 / 8),
+                frac!(2 / 16),
+                frac!(3 / 24),
+                frac!(4 / 32),
+                frac!(5 / 40),
+                frac!(6 / 48),
+                frac!(7 / 56),
+                frac!(8 / 64),
+                frac!(9 / 72),
+            ],
+        );
+
+        let spawner_2 = MobSpawner::new(
+            16,
+            1.7,
+            [
+                // 1/2
+                frac!(1 / 2),
+                frac!(2 / 4),
+                frac!(4 / 8),
+                frac!(6 / 12),
+                frac!(8 / 16),
+                frac!(10 / 20),
+                frac!(16 / 32),
+                // 1/5
+                frac!(3 / 15),
+                frac!(4 / 20),
+                frac!(5 / 25),
+                frac!(6 / 30),
+                frac!(7 / 35),
+                frac!(8 / 40),
+                // 1/7
+                frac!(1 / 7),
+                frac!(2 / 14),
+                frac!(3 / 21),
+                frac!(4 / 28),
+                frac!(5 / 35),
+                frac!(6 / 42),
+                frac!(7 / 49),
+                frac!(8 / 56),
+                frac!(9 / 63),
+                frac!(11 / 77),
+                // 1/8
+                frac!(1 / 8),
+                frac!(2 / 16),
+                frac!(3 / 24),
+                frac!(4 / 32),
+                frac!(5 / 40),
+                frac!(6 / 48),
+                frac!(7 / 56),
+                frac!(8 / 64),
+                frac!(9 / 72),
+            ],
+        );
+
+        let spawner_3 = if !harder {
+            MobSpawner::new(
+                25,
+                1.68,
+                [
+                    // 2
+                    frac!(4 / 2),
+                    frac!(12 / 6),
+                    frac!(18 / 9),
+                    frac!(24 / 12),
+                    // 1/5
+                    frac!(2 / 10),
+                    frac!(5 / 25),
+                    frac!(6 / 30),
+                    frac!(7 / 35),
+                    frac!(10 / 50),
+                    // 1/7
+                    frac!(1 / 7),
+                    frac!(2 / 14),
+                    frac!(3 / 21),
+                    frac!(6 / 42),
+                    frac!(8 / 56),
+                    // 1/8
+                    frac!(1 / 8),
+                    frac!(2 / 16),
+                    frac!(3 / 24),
+                    frac!(5 / 40),
+                    frac!(6 / 48),
+                    frac!(8 / 64),
+                ],
+            )
+        } else {
+            MobSpawner::new(
+                32,
+                1.55,
+                [
+                    // 2
+                    frac!(4 / 2),
+                    frac!(12 / 6),
+                    frac!(18 / 9),
+                    frac!(24 / 12),
+                    frac!(16 / 4),
+                    frac!(117, 1),
+                    // 1/5
+                    frac!(2 / 10),
+                    frac!(5 / 25),
+                    frac!(6 / 30),
+                    frac!(7 / 35),
+                    frac!(8 / 40),
+                    frac!(10 / 50),
+                    frac!(11 / 55),
+                    // 1/7
+                    frac!(3 / 21),
+                    frac!(4 / 28),
+                    frac!(6 / 42),
+                    frac!(8 / 56),
+                    // 1/8
+                    frac!(2 / 16),
+                    frac!(3 / 24),
+                    frac!(5 / 40),
+                    frac!(6 / 48),
+                    frac!(7 / 56),
+                    frac!(8 / 64),
+                    frac!(9 / 72),
+                    frac!(12 / 96),
+                    // 7/8
+                    frac!(14 / 16),
+                    frac!(21 / 24),
+                    frac!(28 / 32),
+                    frac!(35 / 40),
+                    frac!(42 / 48),
+                    frac!(49 / 56),
+                    frac!(56 / 64),
+                    frac!(63 / 72),
+                    frac!(84 / 96),
+                ],
+            )
+        };
+
+        let mut out = LevelSpec {
+            corridor_length: 250.,
+            rng_seed: 0x1ab2_4547_fdab,
             things: vec![
                 // spawn 4 fraction cubes
                 (
-                    0.1,
+                    0.09,
                     ThingKind::WeaponCube {
                         x: 1.,
                         num: frac!(1 / 2),
@@ -595,7 +889,7 @@ impl LevelSpec {
                 )
                     .into(),
                 (
-                    0.14,
+                    0.15,
                     ThingKind::WeaponCube {
                         x: 0.,
                         num: frac!(1 / 7),
@@ -603,119 +897,56 @@ impl LevelSpec {
                 )
                     .into(),
                 (
-                    0.16,
+                    0.18,
                     ThingKind::WeaponCube {
                         x: -0.5,
                         num: frac!(1 / 8),
                     },
                 )
                     .into(),
-                // spawn a mob spawner with equivalent fractions
-                (
-                    0.3,
-                    MobSpawner::new(
-                        16,
-                        1.7,
-                        [
-                            // 1/2
-                            frac!(1 / 2),
-                            frac!(2 / 4),
-                            frac!(4 / 8),
-                            frac!(6 / 12),
-                            frac!(8 / 16),
-                            frac!(10 / 20),
-                            frac!(16 / 32),
-                            // 1/5
-                            frac!(3 / 15),
-                            frac!(4 / 20),
-                            frac!(5 / 25),
-                            frac!(6 / 30),
-                            frac!(7 / 35),
-                            frac!(8 / 40),
-                            // 1/7
-                            frac!(1 / 7),
-                            frac!(2 / 14),
-                            frac!(3 / 21),
-                            frac!(4 / 28),
-                            frac!(5 / 35),
-                            frac!(6 / 42),
-                            frac!(7 / 49),
-                            frac!(8 / 56),
-                            frac!(9 / 63),
-                            frac!(11 / 77),
-                            // 1/8
-                            frac!(1 / 8),
-                            frac!(2 / 16),
-                            frac!(3 / 24),
-                            frac!(4 / 32),
-                            frac!(5 / 40),
-                            frac!(6 / 48),
-                            frac!(7 / 56),
-                            frac!(8 / 64),
-                            frac!(9 / 72),
-                        ],
-                    ),
-                )
-                    .into(),
+                // spawn a mob spawner
+                (0.26, spawner_1).into(),
+                // spawn another mob spawner
+                (0.32, spawner_2).into(),
                 // spawn a 2 cube
                 (
-                    0.5,
+                    0.55,
                     ThingKind::WeaponCube {
                         x: 0.,
                         num: 2.into(),
                     },
                 )
                     .into(),
-                // mob spawner
+                // final mob spawner
+                (0.7, spawner_3).into(),
+            ],
+        };
+
+        if harder {
+            // also spawn a 7/8 cube
+            out.things.push(
                 (
-                    0.7,
-                    MobSpawner::new(
-                        22,
-                        1.66,
-                        [
-                            // 2
-                            frac!(4 / 2),
-                            frac!(12 / 6),
-                            frac!(18 / 9),
-                            frac!(24 / 12),
-                            frac!(16 / 4),
-                            frac!(117, 1),
-                            // 1/5
-                            frac!(5 / 25),
-                            frac!(6 / 30),
-                            frac!(7 / 35),
-                            frac!(8 / 40),
-                            frac!(10 / 50),
-                            // 1/7
-                            frac!(1 / 7),
-                            frac!(3 / 21),
-                            frac!(4 / 28),
-                            frac!(6 / 42),
-                            frac!(8 / 56),
-                            // 1/8
-                            frac!(1 / 8),
-                            frac!(2 / 16),
-                            frac!(3 / 24),
-                            frac!(5 / 40),
-                            frac!(6 / 48),
-                            frac!(7 / 56),
-                            frac!(8 / 64),
-                        ],
-                    ),
+                    0.5,
+                    ThingKind::WeaponCube {
+                        x: 0.5,
+                        num: frac!(7 / 8),
+                    },
                 )
                     .into(),
-            ],
+            );
         }
+
+        out
     }
 
     fn level_4r(level: LevelId) -> Self {
         LevelSpec {
-            corridor_length: 200.,
-            rng_seed: 0xfabf_551d,
+            corridor_length: 250.,
+            rng_seed: 0x5c98_a112_fabf_551d + level.decisions as u64 * 997,
             things: vec![
                 // spawn 4 fraction cubes
                 (
-                    0.1,
+                    0.09,
                     ThingKind::WeaponCube {
                         x: 1.,
                         num: frac!(1 / 3),
@@ -731,7 +962,7 @@ impl LevelSpec {
                 )
                     .into(),
                 (
-                    0.14,
+                    0.15,
                     ThingKind::WeaponCube {
                         x: 0.,
                         num: frac!(1 / 5),
@@ -739,7 +970,7 @@ impl LevelSpec {
                 )
                     .into(),
                 (
-                    0.16,
+                    0.18,
                     ThingKind::WeaponCube {
                         x: -0.5,
                         num: frac!(1 / 6),
@@ -748,10 +979,10 @@ impl LevelSpec {
                     .into(),
                 // spawn a mob spawner with equivalent fractions
                 (
-                    0.3,
+                    0.275,
                     MobSpawner::new(
-                        16,
-                        1.7,
+                        22,
+                        1.72,
                         [
                             // 1/3
                             frac!(1 / 3),
@@ -780,15 +1011,15 @@ impl LevelSpec {
                             frac!(6 / 30),
                             frac!(7 / 35),
                             frac!(8 / 40),
-                            // 1/9
-                            frac!(1 / 9),
-                            frac!(2 / 18),
-                            frac!(3 / 27),
-                            frac!(4 / 36),
-                            frac!(5 / 45),
-                            frac!(6 / 54),
-                            frac!(7 / 63),
-                            frac!(8 / 72),
+                            // 1/6
+                            frac!(1 / 6),
+                            frac!(2 / 12),
+                            frac!(3 / 18),
+                            frac!(4 / 24),
+                            frac!(5 / 30),
+                            frac!(6 / 36),
+                            frac!(7 / 42),
+                            frac!(8 / 48),
                         ],
                     ),
                 )
@@ -806,16 +1037,16 @@ impl LevelSpec {
                 (
                     0.7,
                     MobSpawner::new(
-                        22,
-                        1.66,
+                        24,
+                        1.7,
                         [
                             // 2
                             frac!(4 / 2),
                             frac!(12 / 6),
                             frac!(18 / 9),
-                            frac!(24 / 12),
                             frac!(16 / 4),
-                            frac!(216, 1),
+                            frac!(24 / 12),
+                            frac!(48, 1),
                             // 1/3
                             frac!(1 / 3),
                             frac!(2 / 6),
@@ -825,25 +1056,37 @@ impl LevelSpec {
                             frac!(6 / 18),
                             frac!(7 / 21),
                             frac!(8 / 24),
+                            frac!(9 / 27),
                             // 1/4
                             frac!(1 / 4),
                             frac!(2 / 8),
                             frac!(3 / 12),
                             frac!(4 / 16),
                             frac!(5 / 20),
+                            frac!(6 / 24),
+                            frac!(7 / 28),
+                            frac!(8 / 32),
+                            frac!(9 / 36),
                             // 1/5
+                            frac!(1 / 5),
                             frac!(2 / 10),
                             frac!(3 / 15),
                             frac!(4 / 20),
                             frac!(9 / 45),
                             frac!(10 / 50),
-                            // 1/9
-                            frac!(1 / 9),
-                            frac!(2 / 18),
-                            frac!(3 / 27),
-                            frac!(9 / 81),
-                            frac!(10 / 90),
-                            frac!(11 / 99),
+                            frac!(11 / 55),
+                            // 1/6
+                            frac!(1 / 6),
+                            frac!(2 / 12),
+                            frac!(3 / 18),
+                            frac!(4 / 24),
+                            frac!(5 / 30),
+                            frac!(6 / 36),
+                            frac!(7 / 42),
+                            frac!(8 / 48),
+                            frac!(9 / 54),
+                            frac!(10 / 60),
+                            frac!(11 / 66),
                         ],
                     ),
                 )
@@ -853,69 +1096,60 @@ impl LevelSpec {
     }
 
     fn ending_circle() -> Self {
-        // Ending 1
-        LevelSpec {
-            corridor_length: 1000.,
-            rng_seed: 0,
-            things: vec![(
-                0.,
-                InterludeSpec::from_sequence_and_exit([
-                    (include_str!("interludes/z_circle_1.txt"), None),
-                    (include_str!("interludes/z_circle_2.txt"), None),
-                ]),
-            )
-                .into()],
-        }
+        // Ending 1: walk in circles
+        Self::ending_level_impl(vec![
+            (include_str!("interludes/z_circle_1.txt"), None),
+            (include_str!("interludes/z_circle_2.txt"), None),
+        ])
     }
 
     fn ending_bedroom() -> Self {
-        // Ending 2
-        LevelSpec {
-            corridor_length: 1000.,
-            rng_seed: 0,
-            things: vec![(
-                0.,
-                InterludeSpec::from_sequence_and_exit([
-                    (include_str!("interludes/z_bedroom_1.txt"), None),
-                    (include_str!("interludes/z_bedroom_2.txt"), None),
-                    (include_str!("interludes/z_bedroom_3.txt"), None),
-                ]),
-            )
-                .into()],
-        }
+        // Ending 2: the bedroom
+        Self::ending_level_impl(vec![
+            (
+                include_str!("interludes/z_bedroom_1.txt"),
+                Some("interlude-bedroom.png"),
+            ),
+            (include_str!("interludes/z_bedroom_2.txt"), None),
+            (include_str!("interludes/z_bedroom_3.txt"), None),
+        ])
     }
 
     fn ending_dungeon() -> LevelSpec {
         // Ending 3: the dungeon
-        LevelSpec {
-            corridor_length: 1000.,
-            rng_seed: 0,
-            things: vec![(
-                0.,
-                InterludeSpec::from_sequence_and_exit([
-                    (
-                        include_str!("interludes/z_dungeon_1.txt"),
-                        Some("interlude-dungeon-1.png"),
-                    ),
-                    (
-                        include_str!("interludes/z_dungeon_2.txt"),
-                        Some("interlude-dungeon-2.png"),
-                    ),
-                    (include_str!("interludes/z_dungeon_3.txt"), None),
-                    (include_str!("interludes/z_dungeon_4.txt"), None),
-                ]),
-            )
-                .into()],
-        }
+        Self::ending_level_impl(vec![
+            (
+                include_str!("interludes/z_dungeon_1.txt"),
+                Some("interlude-dungeon-1.png"),
+            ),
+            (
+                include_str!("interludes/z_dungeon_2.txt"),
+                Some("interlude-dungeon-2.png"),
+            ),
+            (include_str!("interludes/z_dungeon_3.txt"), None),
+            (include_str!("interludes/z_dungeon_4.txt"), None),
+        ])
     }
 
-    #[deprecated(note = "just for testing purposes, get rid of this before releasing")]
-    fn level_carp() -> Self {
-        Self::exit_level_impl([("You went down a cliff.\n\nThe End.", None)])
+    fn ending_mirror() -> LevelSpec {
+        // Ending 4: the mirror
+        Self::ending_level_impl(vec![
+            (include_str!("interludes/z_mirror_1.txt"), None),
+            (include_str!("interludes/z_mirror_2.txt"), None),
+            (
+                include_str!("interludes/z_mirror_3.txt"),
+                Some("interlude-mirror-1.png"),
+            ),
+            (include_str!("interludes/z_mirror_4.txt"), None),
+            (
+                include_str!("interludes/z_mirror_5.txt"),
+                Some("interlude-mirror-2.png"),
+            ),
+        ])
     }
 
     /// helper function for levels which just end the game
-    fn exit_level_impl(
+    fn ending_level_impl(
         interludes: impl IntoIterator<Item = (&'static str, Option<&'static str>)>,
     ) -> Self {
         LevelSpec {
