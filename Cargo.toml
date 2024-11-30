@@ -20,7 +20,6 @@ version = "0.14.2"
 default-features = false
 features = [
     "android_shared_stdcxx",
-    #"animation",
     "bevy_asset",
     "bevy_audio",
     "bevy_color",
@@ -30,6 +29,7 @@ features = [
     "bevy_scene",
     "bevy_state",
     "bevy_text",
+    "default_font",
     "bevy_ui",
     "bevy_winit",
     "multi_threaded",
