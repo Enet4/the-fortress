@@ -160,22 +160,6 @@ where
     spawn_button_impl(cmd, sizes, font, text, Some(style), None::<Button>, action)
 }
 
-pub fn spawn_button_in_group_with_style<'a, A, G>(
-    cmd: &'a mut ChildBuilder<'_>,
-    sizes: &Sizes,
-    font: Handle<Font>,
-    text: impl Into<String>,
-    style: Style,
-    group: G,
-    action: A,
-) -> EntityCommands<'a>
-where
-    A: Component,
-    G: Component,
-{
-    spawn_button_impl(cmd, sizes, font, text, Some(style), Some(group), action)
-}
-
 pub fn spawn_button_in_group<'a, A, G>(
     cmd: &'a mut ChildBuilder<'_>,
     sizes: &Sizes,

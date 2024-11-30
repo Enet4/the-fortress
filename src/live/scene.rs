@@ -1,4 +1,4 @@
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::camera::Exposure};
+use bevy::{prelude::*, render::camera::Exposure};
 use tinyrand::{Rand, Seeded, SplitMix};
 
 use crate::{
@@ -157,7 +157,6 @@ pub fn setup_scene(
                     },
                     ..default()
                 },
-                BloomSettings::NATURAL,
                 PostProcessSettings {
                     oscillate: 0.,
                     ..default()
