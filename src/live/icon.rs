@@ -69,7 +69,7 @@ pub fn update_icon_opacity(
 pub fn spawn_icon(cmd: &mut Commands, entity: Entity, num: Num, color: Color) -> Entity {
     // draw a circle
     let (icon_size, font_size) = if *num.denom() >= 10 {
-        (52., 28.)
+        (54., 26.)
     } else if *num.denom() > 1 || num >= 100.into() {
         (48., 28.)
     } else {
