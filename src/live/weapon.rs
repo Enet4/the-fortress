@@ -381,23 +381,35 @@ pub fn weapon_keyboard_input(
             if ('1'..='9').contains(&c) {
                 let shortcut = (c as u8 - b'0') as u8;
 
-                // look up each weapon button and update selection
-                for (entity, weapon_button, is_selected) in &weapon_button_q {
-                    if weapon_button.shortcut == shortcut {
-                        if is_selected {
-                            // no change is needed, stop here
-                            break;
-                        }
-                        let num = weapon_button.num;
-                        cmd.entity(entity).insert(WeaponSelected);
-                        // perform weapon selection
-                        change_weapon.send(ChangeWeapon { num });
+                // look for the weapon button matching the shortcut
+                let weapon_entity =
+                    weapon_button_q
+                        .iter()
+                        .find_map(|(entity, weapon_button, is_selected)| {
+                            if weapon_button.shortcut == shortcut {
+                                if is_selected {
+                                    // no change is needed, stop here
+                                    return Some(None);
+                                }
+                                let num = weapon_button.num;
+                                cmd.entity(entity).insert(WeaponSelected);
 
-                        // play sound
-                        audio_handles.play_equipmentclick1(&mut cmd);
-                        break;
-                    } else {
-                        cmd.entity(entity).remove::<WeaponSelected>();
+                                // perform weapon selection
+                                change_weapon.send(ChangeWeapon { num });
+
+                                // play sound
+                                audio_handles.play_equipmentclick1(&mut cmd);
+                                return Some(Some(entity));
+                            }
+                            None
+                        });
+
+                if let Some(Some(weapon_entity)) = weapon_entity {
+                    // unselect all other weapon buttons
+                    for (entity, _, _) in &weapon_button_q {
+                        if entity != weapon_entity {
+                            cmd.entity(entity).remove::<WeaponSelected>();
+                        }
                     }
                 }
             }
