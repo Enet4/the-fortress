@@ -330,6 +330,7 @@ fn menu_action(
     mut menu_state: ResMut<NextState<MenuState>>,
     mut game_state: ResMut<NextState<AppState>>,
     mut settings: ResMut<GameSettings>,
+    mut cheats: ResMut<Cheats>,
     mut audio_handles: ResMut<AudioHandles>,
     mut button_text_q: Query<&mut Text>,
 ) {
@@ -340,6 +341,10 @@ fn menu_action(
                     app_exit_events.send(AppExit::Success);
                 }
                 MenuButtonAction::Start => {
+                    // update whether the user is cheating
+                    // (so that level advancements through cheating
+                    // do not affect new sessions)
+                    cheats.used_cheats = cheats.invulnerability;
                     game_state.set(AppState::Live);
                     menu_state.set(MenuState::Disabled);
                 }
