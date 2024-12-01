@@ -454,7 +454,7 @@ fn setup_ui(
                 TimeIndicator,
                 TextBundle {
                     text: Text::from_section(
-                        "00:00.00",
+                        "00:00.0",
                         TextStyle {
                             color: Color::WHITE,
                             font: font.clone(),
