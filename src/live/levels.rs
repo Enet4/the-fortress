@@ -700,7 +700,7 @@ impl LevelSpec {
 
     fn level_4r(level: LevelId) -> Self {
         // the hardest level
-        let harder = level.decisions == 0b11001;
+        let harder = level.decisions == 0b1001;
 
         let spawner_1 = MobSpawner::new(
             14,
@@ -830,7 +830,7 @@ impl LevelSpec {
                     frac!(18 / 9),
                     frac!(24 / 12),
                     frac!(16 / 4),
-                    frac!(117, 1),
+                    frac!(120, 1),
                     // 1/5
                     frac!(2 / 10),
                     frac!(5 / 25),
