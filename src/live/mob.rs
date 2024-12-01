@@ -257,7 +257,7 @@ pub fn spawn_mob(cmd: &mut Commands, assets: &MobAssets, position: Vec3, target:
                 ..default()
             },
             mob: Mob,
-            collidable: CollidableBox::new(Vec3::new(TARGET_SIZE - 0.25, TARGET_SIZE - 0.25, 0.25)),
+            collidable: CollidableBox::new(Vec3::new(TARGET_SIZE - 0.4, TARGET_SIZE - 0.4, 0.24)),
             target,
             health: Health { value: 1., max: 1. },
             pickable: PickableBundle {
