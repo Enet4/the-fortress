@@ -106,6 +106,20 @@ impl Plugin for LiveActionPlugin {
                 )
                     .chain(),
             )
+            // partial live game take-down when exiting Interlude and entering Loading
+            .add_systems(
+                OnTransition {
+                    exited: LiveState::ShowingInterlude,
+                    entered: LiveState::LoadingLevel,
+                },
+                (
+                    despawn_all_at::<OnLive>,
+                    scene::setup_scene,
+                    setup_ui,
+                    start_running,
+                )
+                    .chain(),
+            )
             // live game take-down
             .add_systems(OnExit(AppState::Live), despawn_all_at::<OnLive>)
             .add_systems(OnEnter(LiveState::Defeat), enter_defeat)

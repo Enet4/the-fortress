@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 use crate::{assets::DefaultFont, ui::Sizes, AppState, GameSettings};
 
-use super::{phase::PhaseTrigger, player::Player, LiveState};
+use super::{phase::PhaseTrigger, player::Player, LiveState, OnLive};
 
 /// Complete specification for an interlude,
 /// also serving as a marker for the interlude top UI node.
@@ -113,6 +113,7 @@ pub fn spawn_interlude(
     let font = &default_font.0;
 
     cmd.spawn((
+        OnLive,
         spec,
         NodeBundle {
             style: Style {
