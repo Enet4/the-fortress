@@ -698,7 +698,7 @@ impl LevelSpec {
         }
     }
 
-    fn level_4l(level: LevelId) -> Self {
+    fn level_4r(level: LevelId) -> Self {
         // the hardest level
         let harder = level.decisions == 0b11001;
 
@@ -939,7 +939,7 @@ impl LevelSpec {
         out
     }
 
-    fn level_4r(level: LevelId) -> Self {
+    fn level_4l(level: LevelId) -> Self {
         LevelSpec {
             corridor_length: 250.,
             rng_seed: 0x5c98_a112_fabf_551d + level.decisions as u64 * 997,
